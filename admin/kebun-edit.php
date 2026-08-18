@@ -116,8 +116,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!empty($_FILES['pelan_lot_file']['name'])) {
             $max_file_size = 5 * 1024 * 1024; // 5MB
-            $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'pdf'];
-            $allowed_mimes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
+            $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'webp'];
+            $allowed_mimes = [
+                'image/jpeg', 'image/pjpeg', 'image/jpg', 'image/jfif',
+                'image/png', 'image/x-png',
+                'image/gif',
+                'image/webp',
+                'application/pdf', 'application/x-pdf', 'application/octet-stream'
+            ];
 
             $file = $_FILES['pelan_lot_file'];
             $file_name = $file['name'];
@@ -136,11 +142,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
             if (!in_array($file_ext, $allowed_extensions)) {
-                throw new Exception('Jenis fail tidak dibenarkan. Sila gunakan JPG, PNG, GIF, atau PDF.');
+                throw new Exception('Jenis fail tidak dibenarkan. Sila gunakan JPG, PNG, GIF, WEBP, atau PDF.');
             }
 
-            if (!in_array($file_type, $allowed_mimes)) {
-                throw new Exception('Jenis MIME fail tidak sah.');
+            // Inspect actual MIME type from file content
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $detected_mime = finfo_file($finfo, $file_tmp);
+            finfo_close($finfo);
+
+            $valid_mime = in_array($detected_mime, $allowed_mimes) || in_array($file_type, $allowed_mimes);
+            if (!$valid_mime) {
+                throw new Exception('Jenis MIME fail tidak sah (' . htmlspecialchars($detected_mime ?: $file_type) . ').');
             }
 
             $file_content = file_get_contents($file_tmp);
@@ -390,9 +402,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </h3>
             <p class="text-muted small mb-0">No. Lot: <strong><?= htmlspecialchars($kebun['no_lot']) ?></strong> | Pekebun: <strong><?= htmlspecialchars($kebun['nama_pekebun']) ?></strong></p>
         </div>
-        <a href="kebun-detail.php?id=<?= $kebun['id'] ?>" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-arrow-left me-1"></i> Batal & Kembali
-        </a>
+        <div class="d-flex gap-2">
+            <a href="kebun-delete.php?id=<?= $kebun['id'] ?>" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-trash me-1"></i> Padam Kebun
+            </a>
+            <a href="kebun-detail.php?id=<?= $kebun['id'] ?>" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Batal & Kembali
+            </a>
+        </div>
     </div>
 
     <!-- Alert Messages -->
@@ -569,14 +586,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label for="pelan_lot_file" class="form-label">Pelan Lot (Muat Naik Fail Baharu / Tukar)</label>
                     
                     <?php if ($has_pelan_lot): ?>
+                        <?php 
+                            $is_pdf = (!empty($pelan_lot_blob) && substr($pelan_lot_blob, 0, 4) === '%PDF');
+                            $cache_v = substr(md5($pelan_lot_blob ?? ''), 0, 8);
+                        ?>
                         <div class="mb-3 p-3 bg-light rounded border d-flex align-items-center justify-content-between flex-wrap gap-3">
                             <div class="d-flex align-items-center gap-3">
-                                <img src="get-pelan-image.php?id=<?= $kebun['id'] ?>" class="current-img-preview" alt="Pelan Lot Semasa" onerror="this.style.display='none';">
+                                <?php if ($is_pdf): ?>
+                                    <div class="p-3 bg-white rounded border text-center" style="min-width: 90px;">
+                                        <i class="bi bi-file-earmark-pdf-fill text-danger fs-1"></i>
+                                        <div class="small fw-semibold mt-1">Dokumen PDF</div>
+                                    </div>
+                                <?php else: ?>
+                                    <img src="get-pelan-image.php?id=<?= $kebun['id'] ?>&v=<?= $cache_v ?>" class="current-img-preview" alt="Pelan Lot Semasa" onerror="this.style.display='none';">
+                                <?php endif; ?>
                                 <div>
                                     <span class="badge bg-success mb-1">Fail Sedia Ada</span>
-                                    <div class="small text-muted">Pelan lot telah dimuat naik.</div>
-                                    <a href="get-pelan-image.php?id=<?= $kebun['id'] ?>" target="_blank" class="btn btn-sm btn-outline-primary mt-1">
-                                        <i class="bi bi-box-arrow-up-right me-1"></i> Lihat Fail Penuh
+                                    <div class="small text-muted"><?= $is_pdf ? 'Dokumen PDF pelan lot telah dimuat naik.' : 'Gambar pelan lot telah dimuat naik.' ?></div>
+                                    <a href="get-pelan-image.php?id=<?= $kebun['id'] ?>&v=<?= $cache_v ?>" target="_blank" class="btn btn-sm btn-outline-primary mt-1">
+                                        <i class="bi bi-box-arrow-up-right me-1"></i> <?= $is_pdf ? 'Buka Fail PDF' : 'Lihat Gambar Penuh' ?>
                                     </a>
                                 </div>
                             </div>
@@ -589,10 +617,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                     <?php endif; ?>
 
-                    <input type="file" class="form-control" id="pelan_lot_file" name="pelan_lot_file" accept=".jpg,.jpeg,.png,.gif,.pdf" onchange="displayFileName(this)">
+                    <input type="file" class="form-control" id="pelan_lot_file" name="pelan_lot_file" accept=".jpg,.jpeg,.png,.gif,.pdf,.webp" onchange="displayFileName(this)">
                     <small class="text-muted d-block mt-1">
                         <i class="bi bi-info-circle me-1"></i>
-                        Format dibenarkan: JPG, PNG, GIF, PDF | Saiz maksimum: 5MB. Biarkan kosong jika tidak mahu menukar fail semasa.
+                        Format dibenarkan: JPG, PNG, GIF, WEBP, PDF | Saiz maksimum: 5MB. Biarkan kosong jika tidak mahu menukar fail semasa.
                     </small>
                     <div id="file-preview" class="mt-2"></div>
                 </div>
@@ -646,13 +674,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <!-- Submit Buttons -->
-            <div class="d-flex gap-2 justify-content-end mt-4 pt-3 border-top">
-                <a href="kebun-detail.php?id=<?= $kebun['id'] ?>" class="btn btn-outline-secondary rounded-3 px-4">
-                    <i class="bi bi-x-circle me-1"></i> Batal
+            <div class="d-flex flex-wrap justify-content-between align-items-center mt-4 pt-3 border-top gap-2">
+                <a href="kebun-delete.php?id=<?= $kebun['id'] ?>" class="btn btn-outline-danger rounded-3 px-3">
+                    <i class="bi bi-trash me-1"></i> Padam Rekod Kebun
                 </a>
-                <button type="submit" class="btn btn-success rounded-3 px-4" style="background-color: var(--accent-color);">
-                    <i class="bi bi-check-circle me-1"></i> Simpan Perubahan
-                </button>
+                <div class="d-flex gap-2">
+                    <a href="kebun-detail.php?id=<?= $kebun['id'] ?>" class="btn btn-outline-secondary rounded-3 px-4">
+                        <i class="bi bi-x-circle me-1"></i> Batal
+                    </a>
+                    <button type="submit" class="btn btn-success rounded-3 px-4" style="background-color: var(--accent-color);">
+                        <i class="bi bi-check-circle me-1"></i> Simpan Perubahan
+                    </button>
+                </div>
             </div>
 
         </form>
@@ -708,10 +741,12 @@ function displayFileName(input) {
         const fileName = file.name;
         const fileSize = (file.size / 1024 / 1024).toFixed(2);
         const fileType = file.type;
+        const fileExt = fileName.split('.').pop().toLowerCase();
+        const isPdf = fileType === 'application/pdf' || fileExt === 'pdf';
         
         let previewHTML = `
-            <div class="alert alert-info py-2 small d-flex align-items-center">
-                <i class="bi bi-file-earmark-check me-2"></i>
+            <div class="alert alert-info py-2 small d-flex align-items-center mb-2">
+                <i class="bi bi-file-earmark-check me-2 fs-5"></i>
                 <div>
                     <strong>Fail Baharu Dipilih: ${fileName}</strong><br>
                     Saiz: ${fileSize} MB
@@ -719,22 +754,31 @@ function displayFileName(input) {
             </div>
         `;
         
-        if (fileType.startsWith('image/')) {
+        if (fileType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt)) {
             const reader = new FileReader();
             reader.onload = function(e) {
                 const img = document.createElement('img');
                 img.src = e.target.result;
-                img.style.maxWidth = '200px';
+                img.style.maxWidth = '220px';
                 img.style.maxHeight = '200px';
                 img.style.borderRadius = '8px';
                 img.style.marginTop = '0.5rem';
-                img.style.border = '1px solid #e9ecef';
+                img.style.objectFit = 'contain';
+                img.style.border = '1px solid #ced4da';
+                img.className = 'img-thumbnail d-block';
                 preview.appendChild(img);
             };
             reader.readAsDataURL(file);
+        } else if (isPdf) {
+            previewHTML += `
+                <div class="p-2 border rounded bg-light d-flex align-items-center gap-2">
+                    <i class="bi bi-file-earmark-pdf-fill text-danger fs-4"></i>
+                    <span class="small text-muted">Dokumen PDF akan dipaparkan dan boleh dibuka selepas disimpan.</span>
+                </div>
+            `;
         }
         
-        preview.innerHTML += previewHTML;
+        preview.innerHTML = previewHTML;
     }
 }
 </script>

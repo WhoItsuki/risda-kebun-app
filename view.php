@@ -214,10 +214,30 @@ if (!empty($hash)) {
                 <i class="bi bi-image text-success fs-5"></i>
                 <span>Pelan Lot</span>
             </div>
-            <?php if (!empty($kebun['pelan_lot'])): ?>
-                <a href="get-pelan-image.php?id=<?= $kebun['id'] ?>" target="_blank" class="d-block">
-                    <img src="get-pelan-image.php?id=<?= $kebun['id'] ?>" class="img-fluid rounded border" alt="Pelan Lot" style="width: 100%; max-height: 400px; object-fit: contain;" onerror="this.src='https://via.placeholder.com/600x300?text=Pelan+Lot';">
-                </a>
+            <?php 
+                $has_pelan = !empty($kebun['pelan_lot']);
+                $is_pdf = ($has_pelan && substr($kebun['pelan_lot'], 0, 4) === '%PDF');
+                $cache_v = $has_pelan ? substr(md5($kebun['pelan_lot']), 0, 8) : time();
+            ?>
+            <?php if ($has_pelan): ?>
+                <?php if ($is_pdf): ?>
+                    <div class="p-3 bg-light rounded border d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="bi bi-file-earmark-pdf-fill text-danger fs-1"></i>
+                            <div>
+                                <div class="fw-semibold">Dokumen PDF Pelan Lot</div>
+                                <div class="small text-muted">Ketik butang di bawah untuk membuka fail PDF.</div>
+                            </div>
+                        </div>
+                        <a href="get-pelan-image.php?id=<?= $kebun['id'] ?>&v=<?= $cache_v ?>" target="_blank" class="btn btn-success btn-sm rounded-pill px-3">
+                            <i class="bi bi-file-earmark-pdf me-1"></i> Buka PDF
+                        </a>
+                    </div>
+                <?php else: ?>
+                    <a href="get-pelan-image.php?id=<?= $kebun['id'] ?>&v=<?= $cache_v ?>" target="_blank" class="d-block text-center">
+                        <img src="get-pelan-image.php?id=<?= $kebun['id'] ?>&v=<?= $cache_v ?>" class="img-fluid rounded border" alt="Pelan Lot" style="width: 100%; max-height: 400px; object-fit: contain;" onerror="this.src='assets/images/logo-risda.png'; this.style.opacity=0.3;">
+                    </a>
+                <?php endif; ?>
             <?php else: ?>
                 <div class="info-box text-muted mt-1 small">
                     <i class="bi bi-info-circle me-2"></i>

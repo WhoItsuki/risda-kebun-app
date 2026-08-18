@@ -26,16 +26,31 @@ $finfo = finfo_open(FILEINFO_MIME_TYPE);
 $mime_type = finfo_buffer($finfo, $image_data);
 finfo_close($finfo);
 
-// Default to jpeg if detection fails
-if (!$mime_type || strpos($mime_type, 'image') === false) {
-    $mime_type = 'image/jpeg';
+// If detection fails or returns generic octet-stream, inspect magic bytes
+if (!$mime_type || $mime_type === 'application/octet-stream') {
+    if (substr($image_data, 0, 4) === '%PDF') {
+        $mime_type = 'application/pdf';
+    } elseif (substr($image_data, 0, 8) === "\x89PNG\x0d\x0a\x1a\x0a") {
+        $mime_type = 'image/png';
+    } elseif (substr($image_data, 0, 3) === 'GIF') {
+        $mime_type = 'image/gif';
+    } elseif (substr($image_data, 0, 4) === 'RIFF' && substr($image_data, 8, 4) === 'WEBP') {
+        $mime_type = 'image/webp';
+    } else {
+        $mime_type = 'image/jpeg';
+    }
 }
 
-// Set proper headers for image output
+// Set proper headers for image/document output and prevent stale browser caching
 header('Content-Type: ' . $mime_type);
 header('Content-Length: ' . strlen($image_data));
-header('Cache-Control: public, max-age=3600');
-header('Pragma: public');
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
+
+if ($mime_type === 'application/pdf') {
+    header('Content-Disposition: inline; filename="pelan_lot_' . $kebun_id . '.pdf"');
+}
 
 echo $image_data;
 exit();

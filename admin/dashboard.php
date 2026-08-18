@@ -111,6 +111,19 @@ function getSortUrl($column, $current_col, $current_order, $search_term) {
 
 <div class="container-fluid px-4 mb-5">
     
+    <!-- Flash Notification Messages -->
+    <?php if (isset($_SESSION['flash_message'])): ?>
+        <?php 
+            $flash = $_SESSION['flash_message'];
+            unset($_SESSION['flash_message']);
+        ?>
+        <div class="alert alert-<?= htmlspecialchars($flash['type'] ?? 'info') ?> alert-dismissible fade show d-flex align-items-center mb-4 shadow-sm" role="alert">
+            <i class="bi bi-<?= ($flash['type'] === 'success') ? 'check-circle-fill' : 'exclamation-circle-fill' ?> me-2 fs-5"></i>
+            <div><?= htmlspecialchars($flash['message'] ?? '') ?></div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
     <!-- Header Controls -->
     <div class="card card-custom p-4 mb-4">
         <div class="row g-3 align-items-center">
@@ -220,6 +233,7 @@ function getSortUrl($column, $current_col, $current_order, $search_term) {
                                         <a href="kebun-detail.php?id=<?= $row['kebun_id'] ?>" class="btn btn-outline-primary" title="Lihat"><i class="bi bi-eye"></i></a>
                                         <a href="kebun-edit.php?id=<?= $row['kebun_id'] ?>" class="btn btn-outline-secondary" title="Kemaskini"><i class="bi bi-pencil"></i></a>
                                         <a href="kebun-qr.php?id=<?= $row['kebun_id'] ?>" class="btn btn-outline-success" title="Kod QR"><i class="bi bi-qr-code"></i></a>
+                                        <a href="kebun-delete.php?id=<?= $row['kebun_id'] ?>" class="btn btn-outline-danger" title="Padam Rekod"><i class="bi bi-trash"></i></a>
                                     </div>
                                 </td>
                             </tr>

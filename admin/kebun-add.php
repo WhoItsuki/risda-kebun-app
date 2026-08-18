@@ -60,8 +60,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Handle Pelan Lot File Upload to Database
         if (!empty($_FILES['pelan_lot_file']['name'])) {
             $max_file_size = 5 * 1024 * 1024; // 5MB
-            $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'pdf'];
-            $allowed_mimes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
+            $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'webp'];
+            $allowed_mimes = [
+                'image/jpeg', 'image/pjpeg', 'image/jpg', 'image/jfif',
+                'image/png', 'image/x-png',
+                'image/gif',
+                'image/webp',
+                'application/pdf', 'application/x-pdf', 'application/octet-stream'
+            ];
             
             $file = $_FILES['pelan_lot_file'];
             $file_name = $file['name'];
@@ -83,12 +89,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Validate file extension
             $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
             if (!in_array($file_ext, $allowed_extensions)) {
-                throw new Exception('Jenis fail tidak dibenarkan. Sila gunakan JPG, PNG, GIF, atau PDF.');
+                throw new Exception('Jenis fail tidak dibenarkan. Sila gunakan JPG, PNG, GIF, WEBP, atau PDF.');
             }
             
-            // Validate MIME type
-            if (!in_array($file_type, $allowed_mimes)) {
-                throw new Exception('Jenis MIME fail tidak sah.');
+            // Validate MIME type with finfo
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $detected_mime = finfo_file($finfo, $file_tmp);
+            finfo_close($finfo);
+
+            $valid_mime = in_array($detected_mime, $allowed_mimes) || in_array($file_type, $allowed_mimes);
+            if (!$valid_mime) {
+                throw new Exception('Jenis MIME fail tidak sah (' . htmlspecialchars($detected_mime ?: $file_type) . ').');
             }
             
             // Read file content as binary
@@ -407,10 +418,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div class="col-12">
                     <label for="pelan_lot_file" class="form-label">Pelan Lot (Muat Naik Fail)</label>
-                    <input type="file" class="form-control" id="pelan_lot_file" name="pelan_lot_file" accept=".jpg,.jpeg,.png,.gif,.pdf" onchange="displayFileName(this)">
+                    <input type="file" class="form-control" id="pelan_lot_file" name="pelan_lot_file" accept=".jpg,.jpeg,.png,.gif,.pdf,.webp" onchange="displayFileName(this)">
                     <small class="text-muted d-block mt-1">
                         <i class="bi bi-info-circle me-1"></i>
-                        Format dibenarkan: JPG, PNG, GIF, PDF | Saiz maksimum: 5MB
+                        Format dibenarkan: JPG, PNG, GIF, WEBP, PDF | Saiz maksimum: 5MB
                     </small>
                     <div id="file-preview" class="mt-2"></div>
                 </div>
@@ -445,7 +456,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <option value="Lulus - Ansuran 3">Diluluskan - Ansuran 3</option>
                         <option value="Lulus - Ansuran 4">Diluluskan - Ansuran 4</option>
                         <option value="Belum Memohon">Belum Memohon</option>
-                        <option value="Belum Memohon">Ditolak</option>    
+                        <option value="Ditolak">Ditolak</option>    
                     </select>
                 </div>
             </div>
@@ -508,31 +519,42 @@ function displayFileName(input) {
         const fileName = file.name;
         const fileSize = (file.size / 1024 / 1024).toFixed(2); // Convert to MB
         const fileType = file.type;
+        const fileExt = fileName.split('.').pop().toLowerCase();
+        const isPdf = fileType === 'application/pdf' || fileExt === 'pdf';
         
         let previewHTML = `
-            <div class="alert alert-info py-2 small d-flex align-items-center">
-                <i class="bi bi-file-earmark-check me-2"></i>
+            <div class="alert alert-info py-2 small d-flex align-items-center mb-2">
+                <i class="bi bi-file-earmark-check me-2 fs-5"></i>
                 <div>
-                    <strong>${fileName}</strong><br>
+                    <strong>Fail Dipilih: ${fileName}</strong><br>
                     Saiz: ${fileSize} MB
                 </div>
             </div>
         `;
         
         // Show image preview if it's an image
-        if (fileType.startsWith('image/')) {
+        if (fileType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt)) {
             const reader = new FileReader();
             reader.onload = function(e) {
                 const img = document.createElement('img');
                 img.src = e.target.result;
-                img.style.maxWidth = '200px';
+                img.style.maxWidth = '220px';
                 img.style.maxHeight = '200px';
                 img.style.borderRadius = '8px';
                 img.style.marginTop = '0.5rem';
-                img.style.border = '1px solid #e9ecef';
+                img.style.objectFit = 'contain';
+                img.style.border = '1px solid #ced4da';
+                img.className = 'img-thumbnail d-block';
                 preview.appendChild(img);
             };
             reader.readAsDataURL(file);
+        } else if (isPdf) {
+            previewHTML += `
+                <div class="p-2 border rounded bg-light d-flex align-items-center gap-2">
+                    <i class="bi bi-file-earmark-pdf-fill text-danger fs-4"></i>
+                    <span class="small text-muted">Dokumen PDF akan dipaparkan dan boleh dibuka selepas disimpan.</span>
+                </div>
+            `;
         }
         
         preview.innerHTML += previewHTML;

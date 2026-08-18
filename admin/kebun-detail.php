@@ -141,6 +141,9 @@ $has_pelan_lot = !empty($pelan_lot);
             <a href="kebun-qr.php?id=<?= $kebun['id'] ?>" class="btn btn-success" style="background-color: var(--accent-color);">
                 <i class="bi bi-qr-code me-1"></i> Cetak / Lihat Kod QR
             </a>
+            <a href="kebun-delete.php?id=<?= $kebun['id'] ?>" class="btn btn-outline-danger">
+                <i class="bi bi-trash me-1"></i> Padam Rekod
+            </a>
         </div>
     </div>
 
@@ -257,9 +260,28 @@ $has_pelan_lot = !empty($pelan_lot);
                     <div class="col-12">
                         <div class="data-label">Pelan Lot</div>
                         <?php if ($has_pelan_lot): ?>
-                            <a href="get-pelan-image.php?id=<?= $kebun['id'] ?>" target="_blank" class="d-block mt-1">
-                                <img src="get-pelan-image.php?id=<?= $kebun['id'] ?>" class="pelan-img" alt="Pelan Lot" onerror="this.src='https://via.placeholder.com/600x300?text=Pelan+Lot';">
-                            </a>
+                            <?php 
+                                $is_pdf = (substr($kebun['pelan_lot'], 0, 4) === '%PDF');
+                                $cache_v = substr(md5($kebun['pelan_lot']), 0, 8);
+                            ?>
+                            <?php if ($is_pdf): ?>
+                                <div class="p-3 bg-light rounded border d-flex align-items-center justify-content-between flex-wrap gap-2 mt-1">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <i class="bi bi-file-earmark-pdf-fill text-danger fs-1"></i>
+                                        <div>
+                                            <div class="fw-semibold">Dokumen PDF Pelan Lot</div>
+                                            <div class="small text-muted">Pelan lot dimuat naik dalam format PDF.</div>
+                                        </div>
+                                    </div>
+                                    <a href="get-pelan-image.php?id=<?= $kebun['id'] ?>&v=<?= $cache_v ?>" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-file-earmark-pdf me-1"></i> Buka / Muat Turun PDF
+                                    </a>
+                                </div>
+                            <?php else: ?>
+                                <a href="get-pelan-image.php?id=<?= $kebun['id'] ?>&v=<?= $cache_v ?>" target="_blank" class="d-block mt-1">
+                                    <img src="get-pelan-image.php?id=<?= $kebun['id'] ?>&v=<?= $cache_v ?>" class="pelan-img" alt="Pelan Lot" onerror="this.src='../assets/images/logo-risda.png'; this.style.opacity=0.3;">
+                                </a>
+                            <?php endif; ?>
                         <?php else: ?>
                             <div class="info-box text-muted mt-1 small">Tiada gambar pelan lot dimuat naik.</div>
                         <?php endif; ?>
