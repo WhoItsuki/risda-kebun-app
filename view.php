@@ -208,6 +208,24 @@ if (!empty($hash)) {
             </div>
         </div>
 
+        <!-- Pelan Lot Image -->
+        <div class="card card-custom mb-3">
+            <div class="card-header-custom">
+                <i class="bi bi-image text-success fs-5"></i>
+                <span>Pelan Lot</span>
+            </div>
+            <?php if (!empty($kebun['pelan_lot'])): ?>
+                <a href="get-pelan-image.php?id=<?= $kebun['id'] ?>" target="_blank" class="d-block">
+                    <img src="get-pelan-image.php?id=<?= $kebun['id'] ?>" class="img-fluid rounded border" alt="Pelan Lot" style="width: 100%; max-height: 400px; object-fit: contain;" onerror="this.src='https://via.placeholder.com/600x300?text=Pelan+Lot';">
+                </a>
+            <?php else: ?>
+                <div class="info-box text-muted mt-1 small">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Tiada gambar pelan lot dimuat naik untuk kebun ini.
+                </div>
+            <?php endif; ?>
+        </div>
+
         <!-- Panduan Pengurusan Kebun (Statik) -->
         <div class="card card-custom p-3">
             <h6 class="fw-bold mb-3 text-dark"><i class="bi bi-journal-bookmark-fill text-success me-2"></i>Panduan Pengurusan Kebun</h6>
