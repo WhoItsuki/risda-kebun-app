@@ -1,0 +1,543 @@
+<?php
+require_once 'auth.php';
+requireAdminLogin();
+require_once '../config/database.php';
+
+$db = getDBConnection();
+$pekebun_list = [];
+$error = '';
+$success = '';
+
+// Fetch existing pekebun list
+$stmt = $db->prepare("SELECT id, nama, no_telefon, alamat FROM pekebun ORDER BY nama ASC");
+$stmt->execute();
+$pekebun_list = $stmt->fetchAll();
+
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $mode = $_POST['mode'] ?? 'existing'; // 'existing' or 'new_pekebun'
+    
+    try {
+        // New Pekebun Data
+        if ($mode === 'new_pekebun') {
+            $nama = trim($_POST['nama_pekebun'] ?? '');
+            $no_telefon = trim($_POST['no_telefon'] ?? '');
+            $alamat = trim($_POST['alamat'] ?? '');
+            
+            if (empty($nama) || empty($no_telefon) || empty($alamat)) {
+                throw new Exception('Sila isi semua maklumat pekebun.');
+            }
+            
+            $stmt = $db->prepare("INSERT INTO pekebun (nama, no_telefon, alamat) VALUES (?, ?, ?)");
+            $stmt->execute([$nama, $no_telefon, $alamat]);
+            $pekebun_id = $db->lastInsertId();
+        } else {
+            $pekebun_id = (int)($_POST['pekebun_id'] ?? 0);
+            if ($pekebun_id <= 0) {
+                throw new Exception('Sila pilih pekebun yang sah.');
+            }
+        }
+        
+        // Kebun Data
+        $no_lot = trim($_POST['no_lot'] ?? '');
+        $keluasan_kebun = trim($_POST['keluasan_kebun'] ?? '');
+        $lokasi_kebun = trim($_POST['lokasi_kebun'] ?? '');
+        $mukim = trim($_POST['mukim'] ?? '');
+        $daerah = trim($_POST['daerah'] ?? '');
+        $klon_getah = trim($_POST['klon_getah'] ?? '');
+        $jumlah_pokok = (int)($_POST['jumlah_pokok'] ?? 0);
+        $tahun_tanam = trim($_POST['tahun_tanam'] ?? '');
+        $tahun_sulaman = trim($_POST['tahun_sulaman'] ?? '');
+        $jarak_tanaman = trim($_POST['jarak_tanaman'] ?? '');
+        $koordinat = trim($_POST['koordinat'] ?? '');
+        $pelan_lot_blob = null;
+        
+        // Validate kebun fields
+        if (empty($no_lot) || empty($keluasan_kebun) || empty($lokasi_kebun) || empty($daerah) || empty($klon_getah)) {
+            throw new Exception('Sila isi semua maklumat kebun yang diperlukan.');
+        }
+        
+        // Handle Pelan Lot File Upload to Database
+        if (!empty($_FILES['pelan_lot_file']['name'])) {
+            $max_file_size = 5 * 1024 * 1024; // 5MB
+            $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'pdf'];
+            $allowed_mimes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
+            
+            $file = $_FILES['pelan_lot_file'];
+            $file_name = $file['name'];
+            $file_tmp = $file['tmp_name'];
+            $file_size = $file['size'];
+            $file_error = $file['error'];
+            $file_type = $file['type'];
+            
+            // Check for upload errors
+            if ($file_error !== UPLOAD_ERR_OK) {
+                throw new Exception('Ralat semasa memuat naik fail. Sila cuba lagi.');
+            }
+            
+            // Check file size
+            if ($file_size > $max_file_size) {
+                throw new Exception('Saiz fail terlalu besar. Maksimum 5MB.');
+            }
+            
+            // Validate file extension
+            $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+            if (!in_array($file_ext, $allowed_extensions)) {
+                throw new Exception('Jenis fail tidak dibenarkan. Sila gunakan JPG, PNG, GIF, atau PDF.');
+            }
+            
+            // Validate MIME type
+            if (!in_array($file_type, $allowed_mimes)) {
+                throw new Exception('Jenis MIME fail tidak sah.');
+            }
+            
+            // Read file content as binary
+            $file_content = file_get_contents($file_tmp);
+            if ($file_content === false) {
+                throw new Exception('Gagal membaca fail yang dimuat naik.');
+            }
+            
+            $pelan_lot_blob = $file_content;
+        }
+        
+        // Generate unique QR hash
+        $qr_hash = bin2hex(random_bytes(16));
+        
+        // Insert Kebun with BLOB image
+        $stmt = $db->prepare("
+            INSERT INTO kebun (
+                pekebun_id, no_lot, keluasan_kebun, lokasi_kebun, mukim, daerah,
+                klon_getah, jumlah_pokok, tahun_tanam, tahun_sulaman, jarak_tanaman,
+                koordinat, pelan_lot, qr_code_hash
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        
+        $stmt->execute([
+            $pekebun_id, $no_lot, $keluasan_kebun, $lokasi_kebun, $mukim, $daerah,
+            $klon_getah, $jumlah_pokok, $tahun_tanam, $tahun_sulaman, $jarak_tanaman,
+            $koordinat, $pelan_lot_blob, $qr_hash
+        ]);
+        
+        $kebun_id = $db->lastInsertId();
+        
+        // Insert Tanam Semula if provided
+        $no_tanam_semula = trim($_POST['no_tanam_semula'] ?? '');
+        $tahun_tanam_semula = trim($_POST['tahun_tanam_semula'] ?? '');
+        $keluasan_diluluskan = trim($_POST['keluasan_diluluskan'] ?? '');
+        $bantuan_ansuran = trim($_POST['bantuan_ansuran'] ?? '');
+        
+        // Only insert tanam semula if at least one field is filled
+        if (!empty($no_tanam_semula) || !empty($tahun_tanam_semula) || !empty($keluasan_diluluskan) || !empty($bantuan_ansuran)) {
+            $stmt = $db->prepare("
+                INSERT INTO tanam_semula (kebun_id, no_tanam_semula, tahun_tanam_semula, keluasan_diluluskan, bantuan_ansuran)
+                VALUES (?, ?, ?, ?, ?)
+            ");
+            
+            $stmt->execute([
+                $kebun_id,
+                $no_tanam_semula,
+                !empty($tahun_tanam_semula) ? (int)$tahun_tanam_semula : null,
+                !empty($keluasan_diluluskan) ? (float)$keluasan_diluluskan : null,
+                $bantuan_ansuran
+            ]);
+        }
+        
+        $success = "Kebun baru telah ditambah dengan berjaya! No. Lot: " . htmlspecialchars($no_lot);
+        
+        // Redirect after 2 seconds
+        header("Refresh: 2; url=kebun-detail.php?id={$kebun_id}");
+        
+    } catch (Exception $e) {
+        $error = $e->getMessage();
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tambah Kebun Baharu - RISDA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #1b4332;
+            --accent-color: #2d6a4f;
+            --bg-light: #f4f6f8;
+            --card-border: #e9ecef;
+        }
+        body { 
+            background-color: var(--bg-light); 
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
+        }
+        .navbar-custom { 
+            background-color: var(--primary-color); 
+        }
+        .card-custom {
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            background: #ffffff;
+            padding: 1.5rem;
+        }
+        .form-label {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: #2d3748;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+        .form-control, .form-select {
+            border-color: var(--card-border);
+            border-radius: 8px;
+            padding: 0.65rem 0.85rem;
+            font-size: 0.95rem;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.2rem rgba(45, 106, 79, 0.15);
+        }
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1a202c;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 0.75rem;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .tab-toggle {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .tab-toggle .btn {
+            flex: 1;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        .tab-toggle .btn-outline-secondary:not(.active) {
+            border-color: var(--card-border);
+            color: #6c757d;
+        }
+        .tab-toggle .btn.active {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .info-box {
+            background: #f8f9fa;
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 0.85rem;
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark navbar-custom mb-4 shadow-sm">
+    <div class="container-fluid px-4">
+        <a class="navbar-brand fw-bold d-flex align-items-center" href="dashboard.php">
+            <img src="../assets/images/logo-risda.png" alt="Logo RISDA" style="height: 40px; width: auto; margin-right: 0.75rem;">
+            Pentadbir RISDA
+        </a>
+        <a href="dashboard.php" class="btn btn-outline-light btn-sm rounded-pill px-3">
+            <i class="bi bi-arrow-left me-1"></i> Kembali ke Dashboard
+        </a>
+    </div>
+</nav>
+
+<div class="container px-4 mb-5" style="max-width: 900px;">
+
+    <!-- Header -->
+    <div class="mb-4">
+        <h3 class="fw-bold mb-1 text-dark">
+            <i class="bi bi-plus-circle-fill text-success me-2"></i> Tambah Kebun Baharu
+        </h3>
+        <p class="text-muted small mb-0">Lengkapkan borang di bawah untuk mendaftar kebun dan pekebun baru.</p>
+    </div>
+
+    <!-- Alert Messages -->
+    <?php if (!empty($error)): ?>
+        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+            <i class="bi bi-exclamation-circle-fill me-2 fs-5"></i>
+            <div><?= htmlspecialchars($error) ?></div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
+    <?php if (!empty($success)): ?>
+        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
+            <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+            <div><?= htmlspecialchars($success) ?></div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
+    <!-- Form Card -->
+    <div class="card card-custom">
+        <form action="kebun-add.php" method="POST" enctype="multipart/form-data">
+            
+            <!-- Pekebun Section -->
+            <div class="section-header">
+                <i class="bi bi-person-lines-fill text-success"></i>
+                <span>Maklumat Pekebun</span>
+            </div>
+
+            <!-- Toggle Existing or New Pekebun -->
+            <div class="tab-toggle">
+                <button type="button" class="btn btn-outline-secondary active" onclick="switchMode('existing')">
+                    <i class="bi bi-check-circle me-1"></i> Pekebun Sedia Ada
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="switchMode('new_pekebun')">
+                    <i class="bi bi-person-plus me-1"></i> Pekebun Baru
+                </button>
+            </div>
+
+            <!-- Existing Pekebun Tab -->
+            <div id="existing-tab" class="tab-content active">
+                <div class="mb-3">
+                    <label for="pekebun_id" class="form-label">Pilih Pekebun</label>
+                    <select class="form-select" id="pekebun_id" name="pekebun_id">
+                        <option value="">-- Sila Pilih Pekebun --</option>
+                        <?php foreach ($pekebun_list as $pekebun): ?>
+                            <option value="<?= $pekebun['id'] ?>">
+                                <?= htmlspecialchars($pekebun['nama']) ?> (<?= htmlspecialchars($pekebun['no_telefon']) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
+            <!-- New Pekebun Tab -->
+            <div id="new_pekebun-tab" class="tab-content">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="nama_pekebun" class="form-label">Nama Pekebun</label>
+                        <input type="text" class="form-control" id="nama_pekebun" name="nama_pekebun" placeholder="Nama pekebun">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="no_telefon" class="form-label">No. Telefon</label>
+                        <input type="tel" class="form-control" id="no_telefon" name="no_telefon" placeholder="Contoh: 0123456789">
+                    </div>
+                    <div class="col-12">
+                        <label for="alamat" class="form-label">Alamat</label>
+                        <textarea class="form-control" id="alamat" name="alamat" rows="3" placeholder="Alamat pekebun"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <input type="hidden" id="mode-input" name="mode" value="existing">
+
+            <!-- Kebun Section -->
+            <div class="section-header mt-4">
+                <i class="bi bi-geo-alt-fill text-success"></i>
+                <span>Maklumat Kebun</span>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="no_lot" class="form-label">No. Lot *</label>
+                    <input type="text" class="form-control" id="no_lot" name="no_lot" required placeholder="Contoh: L001">
+                </div>
+                <div class="col-md-6">
+                    <label for="keluasan_kebun" class="form-label">Keluasan Kebun (Hektar) *</label>
+                    <input type="number" class="form-control" id="keluasan_kebun" name="keluasan_kebun" required step="0.01" placeholder="Contoh: 2.5">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="lokasi_kebun" class="form-label">Lokasi Kebun *</label>
+                    <input type="text" class="form-control" id="lokasi_kebun" name="lokasi_kebun" required placeholder="Nama lokasi">
+                </div>
+                <div class="col-md-6">
+                    <label for="mukim" class="form-label">Mukim</label>
+                    <input type="text" class="form-control" id="mukim" name="mukim" placeholder="Nama mukim">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="daerah" class="form-label">Daerah *</label>
+                    <input type="text" class="form-control" id="daerah" name="daerah" required placeholder="Nama daerah">
+                </div>
+                <div class="col-md-6">
+                    <label for="klon_getah" class="form-label">Klon Getah *</label>
+                    <select class="form-select" id="klon_getah" name="klon_getah" required>
+                        <option value="">-- Pilih Klon --</option>
+                        <option value="GT1">GT1</option>
+                        <option value="RRIM600">RRIM600</option>
+                        <option value="RRIM712">RRIM712</option>
+                        <option value="BPM24">BPM24</option>
+                        <option value="Lain">Lain</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="jumlah_pokok" class="form-label">Jumlah Pokok</label>
+                    <input type="number" class="form-control" id="jumlah_pokok" name="jumlah_pokok" placeholder="Contoh: 500">
+                </div>
+                <div class="col-md-6">
+                    <label for="tahun_tanam" class="form-label">Tahun Tanam</label>
+                    <input type="number" class="form-control" id="tahun_tanam" name="tahun_tanam" placeholder="Contoh: 2020" min="1900" max="2100">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="tahun_sulaman" class="form-label">Tahun Sulaman</label>
+                    <input type="number" class="form-control" id="tahun_sulaman" name="tahun_sulaman" placeholder="Contoh: 2023" min="1900" max="2100">
+                </div>
+                <div class="col-md-6">
+                    <label for="jarak_tanaman" class="form-label">Jarak Tanaman</label>
+                    <input type="text" class="form-control" id="jarak_tanaman" name="jarak_tanaman" placeholder="Contoh: 4m x 6m">
+                </div>
+
+                <div class="col-12">
+                    <label for="koordinat" class="form-label">Koordinat (Latitude, Longitude)</label>
+                    <input type="text" class="form-control" id="koordinat" name="koordinat" placeholder="Contoh: 3.1357, 101.6880">
+                </div>
+
+                <div class="col-12">
+                    <label for="pelan_lot_file" class="form-label">Pelan Lot (Muat Naik Fail)</label>
+                    <input type="file" class="form-control" id="pelan_lot_file" name="pelan_lot_file" accept=".jpg,.jpeg,.png,.gif,.pdf" onchange="displayFileName(this)">
+                    <small class="text-muted d-block mt-1">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Format dibenarkan: JPG, PNG, GIF, PDF | Saiz maksimum: 5MB
+                    </small>
+                    <div id="file-preview" class="mt-2"></div>
+                </div>
+            </div>
+
+            <!-- Tanam Semula Section -->
+            <div class="section-header mt-4">
+                <i class="bi bi-file-text-fill text-success"></i>
+                <span>Maklumat Tanam Semula (Pilihan)</span>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="no_tanam_semula" class="form-label">No. Tanam Semula</label>
+                    <input type="text" class="form-control" id="no_tanam_semula" name="no_tanam_semula" placeholder="Contoh: TS001">
+                </div>
+                <div class="col-md-6">
+                    <label for="tahun_tanam_semula" class="form-label">Tahun Tanam Semula</label>
+                    <input type="number" class="form-control" id="tahun_tanam_semula" name="tahun_tanam_semula" placeholder="Contoh: 2023" min="1900" max="2100">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="keluasan_diluluskan" class="form-label">Keluasan Diluluskan (Hektar)</label>
+                    <input type="number" class="form-control" id="keluasan_diluluskan" name="keluasan_diluluskan" step="0.01" placeholder="Contoh: 1.5">
+                </div>
+                <div class="col-md-6">
+                    <label for="bantuan_ansuran" class="form-label">Status Bantuan Ansuran</label>
+                    <select class="form-select" id="bantuan_ansuran" name="bantuan_ansuran">
+                        <option value="">Pilih Status Ansuran</option>
+                        <option value="Lulus - Ansuran 1">Diluluskan - Ansuran 1</option>
+                        <option value="Lulus - Ansuran 2">Diluluskan - Ansuran 2</option>
+                        <option value="Lulus - Ansuran 3">Diluluskan - Ansuran 3</option>
+                        <option value="Lulus - Ansuran 4">Diluluskan - Ansuran 4</option>
+                        <option value="Belum Memohon">Belum Memohon</option>
+                        <option value="Belum Memohon">Ditolak</option>    
+                    </select>
+                </div>
+            </div>
+
+            <!-- Info Box -->
+            <div class="info-box mt-4">
+                <i class="bi bi-info-circle-fill me-2"></i>
+                <strong>Catatan:</strong> Medan bertanda * adalah wajib diisi. Kod QR akan dijana secara automatik selepas kebun ditambah.
+            </div>
+
+            <!-- Submit Buttons -->
+            <div class="d-flex gap-2 justify-content-end mt-4">
+                <a href="dashboard.php" class="btn btn-outline-secondary rounded-3 px-4">
+                    <i class="bi bi-x-circle me-1"></i> Batal
+                </a>
+                <button type="submit" class="btn btn-success rounded-3 px-4" style="background-color: var(--accent-color);">
+                    <i class="bi bi-check-circle me-1"></i> Simpan Kebun Baru
+                </button>
+            </div>
+
+        </form>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function switchMode(mode) {
+    // Toggle button active state
+    document.querySelectorAll('.tab-toggle .btn').forEach(btn => btn.classList.remove('active'));
+    event.target.closest('.btn').classList.add('active');
+    
+    // Toggle tab content
+    document.getElementById('existing-tab').classList.remove('active');
+    document.getElementById('new_pekebun-tab').classList.remove('active');
+    
+    if (mode === 'existing') {
+        document.getElementById('existing-tab').classList.add('active');
+        document.getElementById('pekebun_id').setAttribute('required', 'required');
+        document.getElementById('nama_pekebun').removeAttribute('required');
+        document.getElementById('no_telefon').removeAttribute('required');
+        document.getElementById('alamat').removeAttribute('required');
+    } else if (mode === 'new_pekebun') {
+        document.getElementById('new_pekebun-tab').classList.add('active');
+        document.getElementById('pekebun_id').removeAttribute('required');
+        document.getElementById('nama_pekebun').setAttribute('required', 'required');
+        document.getElementById('no_telefon').setAttribute('required', 'required');
+        document.getElementById('alamat').setAttribute('required', 'required');
+    }
+    
+    document.getElementById('mode-input').value = mode;
+}
+
+function displayFileName(input) {
+    const preview = document.getElementById('file-preview');
+    preview.innerHTML = ''; // Clear previous preview
+    
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const fileName = file.name;
+        const fileSize = (file.size / 1024 / 1024).toFixed(2); // Convert to MB
+        const fileType = file.type;
+        
+        let previewHTML = `
+            <div class="alert alert-info py-2 small d-flex align-items-center">
+                <i class="bi bi-file-earmark-check me-2"></i>
+                <div>
+                    <strong>${fileName}</strong><br>
+                    Saiz: ${fileSize} MB
+                </div>
+            </div>
+        `;
+        
+        // Show image preview if it's an image
+        if (fileType.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.style.maxWidth = '200px';
+                img.style.maxHeight = '200px';
+                img.style.borderRadius = '8px';
+                img.style.marginTop = '0.5rem';
+                img.style.border = '1px solid #e9ecef';
+                preview.appendChild(img);
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        preview.innerHTML += previewHTML;
+    }
+}
+</script>
+</body>
+</html>

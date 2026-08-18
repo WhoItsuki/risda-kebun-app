@@ -95,7 +95,8 @@ function getSortUrl($column, $current_col, $current_order, $search_term) {
 <nav class="navbar navbar-expand-lg navbar-dark navbar-custom mb-4 shadow-sm">
     <div class="container-fluid px-4">
         <a class="navbar-brand fw-bold d-flex align-items-center" href="dashboard.php">
-            <i class="bi bi-tree-fill text-warning me-2 fs-4"></i> Dashboard Pentadbir RISDA
+            <img src="../assets/images/logo-risda.png" alt="Logo RISDA" style="height: 40px; width: auto; margin-right: 0.75rem;">
+            Dashboard Pentadbir RISDA
         </a>
         <div class="d-flex align-items-center gap-3">
             <span class="text-white small d-none d-md-inline">

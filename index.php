@@ -63,7 +63,7 @@ if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true
 <div class="container p-3 d-flex justify-content-center">
     <div class="card portal-card overflow-hidden">
         <div class="brand-header text-center">
-            <i class="bi bi-tree-fill display-4 text-warning mb-2"></i>
+            <img src="assets/images/logo-risda.png" alt="Logo RISDA" class="mb-2" style="height: 80px; width: auto;">
             <h4 class="fw-bold mb-1">Sistem Maklumat Kebun</h4>
             <p class="small mb-0 opacity-75">RISDA Tanam Semula</p>
         </div>

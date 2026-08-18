@@ -6,13 +6,12 @@ $kebun = null;
 
 if (!empty($hash)) {
     $db = getDBConnection();
-    
-    // Hanya ambil maklumat Kebun, Pekebun, dan Tanam Semula
+
     $stmt = $db->prepare("
         SELECT 
+            k.*,
             p.nama AS nama_pekebun, p.no_telefon, p.alamat,
-            k.no_lot, k.lokasi_kebun, k.mukim, k.daerah, k.keluasan_kebun, k.tahun_tanam, k.tahun_sulaman, k.klon_getah, k.jarak_tanaman, k.jumlah_pokok,
-            ts.no_tanam_semula, ts.tahun_tanam_semula, ts.keluasan_diluluskan, ts.bantuan_ansuran
+            ts.id AS tanam_semula_id, ts.no_tanam_semula, ts.tahun_tanam_semula, ts.keluasan_diluluskan, ts.bantuan_ansuran
         FROM kebun k
         JOIN pekebun p ON k.pekebun_id = p.id
         LEFT JOIN tanam_semula ts ON k.id = ts.kebun_id
@@ -34,11 +33,64 @@ if (!empty($hash)) {
         :root {
             --primary-color: #1b4332;
             --accent-color: #2d6a4f;
-            --bg-light: #f8f9fa;
+            --bg-light: #f4f6f8;
+            --card-border: #e9ecef;
         }
-        body { background-color: var(--bg-light); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .header-banner { background-color: var(--primary-color); color: #ffffff; padding: 1.25rem 1rem; border-bottom: 4px solid #40916c; }
-        .card-custom { border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 1rem; }
+        body {
+            background-color: var(--bg-light);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .header-banner {
+            background-color: var(--primary-color);
+            color: #ffffff;
+            padding: 1.25rem 1rem;
+            border-bottom: 4px solid #40916c;
+        }
+        .card-custom {
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            background: #ffffff;
+            padding: 1.25rem;
+        }
+        .card-header-custom {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #1a202c;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .data-label {
+            font-size: 0.675rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6c757d;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+        .data-value {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #2d3748;
+            word-break: break-word;
+        }
+        .info-box {
+            background: #f8f9fa;
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 0.85rem;
+        }
+        .badge-custom {
+            display: inline-block;
+            padding: 0.35em 0.65em;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
         .nav-pills .nav-link.active { background-color: var(--accent-color); }
         .nav-pills .nav-link { color: var(--primary-color); font-weight: 600; border: 1px solid #d8f3dc; font-size: 0.85rem; }
         .static-img { width: 100%; height: 120px; object-fit: cover; border-radius: 8px; border: 1px solid #dee2e6; }
@@ -47,7 +99,8 @@ if (!empty($hash)) {
 <body>
 
 <div class="header-banner text-center mb-3">
-    <h6 class="text-uppercase tracking-wider mb-1 opacity-75 small">Sistem Maklumat Kebun</h6>
+    <img src="assets/images/logo-risda.png" alt="Logo RISDA" class="mb-2" style="height: 60px; width: auto;">
+    <h6 class="text-uppercase tracking-wider mb-1 opacity-75 small">e-Kebun Getah</h6>
     <h5 class="fw-bold mb-0">RISDA Tanam Semula</h5>
 </div>
 
@@ -60,123 +113,280 @@ if (!empty($hash)) {
         </div>
     <?php else: ?>
 
-        <!-- Maklumat Kebun & Pekebun -->
-        <div class="card card-custom p-3">
-            <div class="d-flex align-items-center mb-2">
-                <i class="bi bi-geo-alt-fill text-success fs-5 me-2"></i>
-                <h6 class="fw-bold mb-0 text-dark">Maklumat Kebun & Pekebun</h6>
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <div class="card card-custom">
+                    <div class="card-header-custom">
+                        <i class="bi bi-person-lines-fill text-success fs-5"></i>
+                        <span>Maklumat Pekebun</span>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="data-label">Nama Pekebun</div>
+                            <div class="data-value"><?= htmlspecialchars($kebun['nama_pekebun'] ?? '-') ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="data-label">No. Telefon</div>
+                            <div class="data-value"><?= htmlspecialchars($kebun['no_telefon'] ?? '-') ?></div>
+                        </div>
+                        <div class="col-12">
+                            <div class="data-label">Alamat</div>
+                            <div class="data-value"><?= htmlspecialchars($kebun['alamat'] ?? '-') ?></div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <hr class="my-2">
-            <div class="row g-2 small">
-                <div class="col-6"><span class="text-muted">Nama Pekebun:</span><br><strong><?= htmlspecialchars($kebun['nama_pekebun']) ?></strong></div>[cite: 1]
-                <div class="col-6"><span class="text-muted">No. Telefon:</span><br><strong><?= htmlspecialchars($kebun['no_telefon']) ?></strong></div>[cite: 1]
-                <div class="col-12"><span class="text-muted">Alamat:</span><br><strong><?= htmlspecialchars($kebun['alamat']) ?></strong></div>[cite: 1]
-                <div class="col-6"><span class="text-muted">No. Lot:</span><br><strong><?= htmlspecialchars($kebun['no_lot']) ?></strong></div>[cite: 1]
-                <div class="col-6"><span class="text-muted">Keluasan:</span><br><strong><?= htmlspecialchars($kebun['keluasan_kebun']) ?> Hektar</strong></div>[cite: 1]
-                <div class="col-6"><span class="text-muted">Lokasi / Mukim:</span><br><strong><?= htmlspecialchars($kebun['lokasi_kebun']) ?>, <?= htmlspecialchars($kebun['mukim']) ?></strong></div>[cite: 1]
-                <div class="col-6"><span class="text-muted">Daerah:</span><br><strong><?= htmlspecialchars($kebun['daerah']) ?></strong></div>[cite: 1]
-                <div class="col-6"><span class="text-muted">Klon Getah:</span><br><strong><?= htmlspecialchars($kebun['klon_getah']) ?></strong></div>[cite: 1]
+
+            <div class="col-md-6">
+                <div class="card card-custom">
+                    <div class="card-header-custom">
+                        <i class="bi bi-geo-alt-fill text-success fs-5"></i>
+                        <span>Maklumat Kebun</span>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="data-label">No. Lot</div>
+                            <div class="data-value"><?= htmlspecialchars($kebun['no_lot'] ?? '-') ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="data-label">Keluasan Kebun</div>
+                            <div class="data-value"><?= htmlspecialchars($kebun['keluasan_kebun'] ?? '-') ?> Hektar</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="data-label">Lokasi / Mukim</div>
+                            <div class="data-value"><?= htmlspecialchars($kebun['lokasi_kebun'] ?? '-') ?>, <?= htmlspecialchars($kebun['mukim'] ?? '-') ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="data-label">Daerah</div>
+                            <div class="data-value"><?= htmlspecialchars($kebun['daerah'] ?? '-') ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="data-label">Klon Getah</div>
+                            <div class="data-value"><?= htmlspecialchars($kebun['klon_getah'] ?? '-') ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="data-label">Jumlah Pokok</div>
+                            <div class="data-value"><?= htmlspecialchars($kebun['jumlah_pokok'] ?? '-') ?> Pokok</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="data-label">Tahun Tanam / Sulaman</div>
+                            <div class="data-value"><?= htmlspecialchars($kebun['tahun_tanam'] ?? '-') ?> / <?= htmlspecialchars($kebun['tahun_sulaman'] ?? '-') ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="data-label">Jarak Tanaman</div>
+                            <div class="data-value"><?= htmlspecialchars($kebun['jarak_tanaman'] ?? '-') ?></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-custom mb-3">
+            <div class="card-header-custom">
+                <i class="bi bi-file-text-fill text-success fs-5"></i>
+                <span>Maklumat Tanam Semula</span>
+            </div>
+            <div class="row g-3">
+                <div class="col-sm-6">
+                    <div class="data-label">No. Tanam Semula</div>
+                    <div class="data-value"><?= htmlspecialchars($kebun['no_tanam_semula'] ?? '-') ?></div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="data-label">Tahun Tanam Semula</div>
+                    <div class="data-value"><?= htmlspecialchars($kebun['tahun_tanam_semula'] ?? '-') ?></div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="data-label">Keluasan Diluluskan</div>
+                    <div class="data-value"><?= htmlspecialchars($kebun['keluasan_diluluskan'] ?? '-') ?> Hektar</div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="data-label">Status Bantuan Ansuran</div>
+                    <div class="data-value">
+                        <span class="badge-custom bg-success text-white"><?= htmlspecialchars($kebun['bantuan_ansuran'] ?? '-') ?></span>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Panduan Pengurusan Kebun (Statik) -->
         <div class="card card-custom p-3">
-            <h6 class="fw-bold mb-3 text-dark"><i class="bi bi-journal-bookmark-fill text-success me-2"></i>Panduan Pengurusan Kebun</h6>[cite: 1]
+            <h6 class="fw-bold mb-3 text-dark"><i class="bi bi-journal-bookmark-fill text-success me-2"></i>Panduan Pengurusan Kebun</h6>
             
-            <ul class="nav nav-pills mb-3 flex-nowrap overflow-auto py-1 gap-1" id="panduanTab" role="tablist">
-                <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-tumbesaran">1. Tumbesaran</button></li>[cite: 1]
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-cantasan">2. Cantasan Dahan</button></li>[cite: 1]
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-pembajaan">3. Pembajaan</button></li>[cite: 1]
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-rumpai">4. Kawalan Rumpai</button></li>[cite: 1]
+            <ul class="nav nav-pills mb-3 flex-wrap py-1 gap-1" id="panduanTab" role="tablist">
+                <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-menanam">Menanam</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-pembajaan-muda">Pembajaan Muda</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-galakan">Galakan Dahan</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-cantasan-terkawal">Cantasan Terkawal</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-cantasan-pembetulan">Cantasan Pembetulan</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-rumpai">Kawalan Rumpai</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-penyakit">Kawalan Penyakit</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-perosak">Kawalan Perosak</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-baja">Jenis Baja</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-nutrien">Nutrient & Fungsi</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-kadar">Kadar Pembajaan</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-racun">Jenis Racun</button></li>
             </ul>
 
             <div class="tab-content" id="panduanTabContent">
                 
-                <!-- 1. Panduan Tumbesaran Pokok -->
-                <div class="tab-pane fade show active" id="tab-tumbesaran">
+                <!-- 1. Teknik Menanam Getah -->
+                <div class="tab-pane fade show active" id="tab-menanam">
                     <div class="mb-3">
-                        <h6 class="fw-bold text-success mb-1">Pengukuran Lilitan Batang</h6>
-                        <p class="small text-muted mb-2">Lilitan batang sasaran sekurang-kurangnya 10-12 cm pada peringkat awal. Pastikan tiada serangan penyakit daun.</p>
-                        
-                        <div class="row g-2">
-                            <div class="col-4">
-                                <a href="assets/images/tumbesaran1.jpg" target="_blank">
-                                    <img src="assets/images/tumbesaran1.jpg" class="static-img" alt="Tumbesaran 1" onerror="this.src='https://via.placeholder.com/150?text=Gambar+1';">
-                                </a>
-                            </div>
-                            <div class="col-4">
-                                <a href="assets/images/tumbesaran2.jpg" target="_blank">
-                                    <img src="assets/images/tumbesaran2.jpg" class="static-img" alt="Tumbesaran 2" onerror="this.src='https://via.placeholder.com/150?text=Gambar+2';">
-                                </a>
-                            </div>
-                            <div class="col-4">
-                                <a href="assets/images/tumbesaran3.jpg" target="_blank">
-                                    <img src="assets/images/tumbesaran3.jpg" class="static-img" alt="Tumbesaran 3" onerror="this.src='https://via.placeholder.com/150?text=Gambar+3';">
-                                </a>
-                            </div>
+                        <h6 class="fw-bold text-success mb-1">Teknik Menanam Getah</h6>
+                        <p class="small text-muted mb-2">Panduan lengkap untuk teknik penanaman pokok getah yang betul.</p>
+                        <div class="text-center">
+                            <a href="assets/images/teknik-menanam-getah.jpeg" target="_blank">
+                                <img src="assets/images/teknik-menanam-getah.jpeg" class="img-fluid rounded border" alt="Teknik Menanam Getah" style="max-height: 400px;">
+                            </a>
                         </div>
                     </div>
                 </div>
 
-                <!-- 2. Panduan Pembajaan Cantasan Dahan -->
-                <div class="tab-pane fade" id="tab-cantasan">
+                <!-- 2. Pembajaan Getah Muda -->
+                <div class="tab-pane fade" id="tab-pembajaan-muda">
                     <div class="mb-3">
-                        <h6 class="fw-bold text-success mb-1">Cantasan Dahan & Tunas Air</h6>
-                        <p class="small text-muted mb-2">Lakukan cantasan dahan di bawah ketinggian 1.5 meter. Buang tunas air secara berkala untuk galakkan pembentukan tajuk yang seimbang.</p>
-                        
-                        <div class="row g-2">
-                            <div class="col-4">
-                                <a href="assets/images/cantasan1.jpg" target="_blank">
-                                    <img src="assets/images/cantasan1.jpg" class="static-img" alt="Cantasan 1" onerror="this.src='https://via.placeholder.com/150?text=Gambar+1';">
-                                </a>
-                            </div>
-                            <div class="col-4">
-                                <a href="assets/images/cantasan2.jpg" target="_blank">
-                                    <img src="assets/images/cantasan2.jpg" class="static-img" alt="Cantasan 2" onerror="this.src='https://via.placeholder.com/150?text=Gambar+2';">
-                                </a>
-                            </div>
+                        <h6 class="fw-bold text-success mb-1">Pembajaan Getah Muda</h6>
+                        <p class="small text-muted mb-2">Teknik pembajaan yang sesuai untuk pokok getah yang masih muda.</p>
+                        <div class="text-center">
+                            <a href="assets/images/teknik-pembajaan-getah-muda.jpeg" target="_blank">
+                                <img src="assets/images/teknik-pembajaan-getah-muda.jpeg" class="img-fluid rounded border" alt="Pembajaan Getah Muda" style="max-height: 400px;">
+                            </a>
                         </div>
                     </div>
                 </div>
 
-                <!-- 3. Panduan Pembajaan -->
-                <div class="tab-pane fade" id="tab-pembajaan">
+                <!-- 3. Galakan Dahan -->
+                <div class="tab-pane fade" id="tab-galakan">
                     <div class="mb-3">
-                        <h6 class="fw-bold text-success mb-1">Penggunaan & Sukatan Baja RISDA</h6>
-                        <p class="small text-muted mb-2">Gunakan Baja Sebatian RISDA mengikut sukatan 250g hingga 500g bagi setiap pokok. Sapu baja secara bulatan mengelilingi kanopi pokok.</p>
-                        
-                        <div class="row g-2">
-                            <div class="col-4">
-                                <a href="assets/images/pembajaan1.jpg" target="_blank">
-                                    <img src="assets/images/pembajaan1.jpg" class="static-img" alt="Pembajaan 1" onerror="this.src='https://via.placeholder.com/150?text=Gambar+1';">
-                                </a>
-                            </div>
-                            <div class="col-4">
-                                <a href="assets/images/pembajaan2.jpg" target="_blank">
-                                    <img src="assets/images/pembajaan2.jpg" class="static-img" alt="Pembajaan 2" onerror="this.src='https://via.placeholder.com/150?text=Gambar+2';">
-                                </a>
-                            </div>
+                        <h6 class="fw-bold text-success mb-1">Teknik Galakan Dahan</h6>
+                        <p class="small text-muted mb-2">Panduan untuk membentuk tajuk pokok getah melalui galakan dahan.</p>
+                        <div class="text-center">
+                            <a href="assets/images/teknik-galakan-dahan.jpeg" target="_blank">
+                                <img src="assets/images/teknik-galakan-dahan.jpeg" class="img-fluid rounded border" alt="Galakan Dahan" style="max-height: 400px;">
+                            </a>
                         </div>
                     </div>
                 </div>
 
-                <!-- 4. Panduan Kawalan Rumpai -->
+                <!-- 4. Cantasan Terkawal -->
+                <div class="tab-pane fade" id="tab-cantasan-terkawal">
+                    <div class="mb-3">
+                        <h6 class="fw-bold text-success mb-1">Cantasan Terkawal</h6>
+                        <p class="small text-muted mb-2">Teknik cantasan dahan yang terkawal untuk memastikan pertumbuhan optimal.</p>
+                        <div class="text-center">
+                            <a href="assets/images/teknik-cantasan-terkawal.jpeg" target="_blank">
+                                <img src="assets/images/teknik-cantasan-terkawal.jpeg" class="img-fluid rounded border" alt="Cantasan Terkawal" style="max-height: 400px;">
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. Cantasan Pembetulan -->
+                <div class="tab-pane fade" id="tab-cantasan-pembetulan">
+                    <div class="mb-3">
+                        <h6 class="fw-bold text-success mb-1">Cantasan Pembetulan</h6>
+                        <p class="small text-muted mb-2">Teknik pembetulan pokok getah melalui cantasan strategis.</p>
+                        <div class="text-center">
+                            <a href="assets/images/teknik-cantasan-pembetulan.jpeg" target="_blank">
+                                <img src="assets/images/teknik-cantasan-pembetulan.jpeg" class="img-fluid rounded border" alt="Cantasan Pembetulan" style="max-height: 400px;">
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. Kawalan Rumpai -->
                 <div class="tab-pane fade" id="tab-rumpai">
                     <div class="mb-3">
-                        <h6 class="fw-bold text-success mb-1">Penyelenggaraan Lorong & Rumpai</h6>
-                        <p class="small text-muted mb-2">Lakukan kawalan rumpai dan lalang secara kimia atau manual setiap 2 bulan di kawasan lorong pokok bagi mengelakkan persaingan nutrisi.</p>
-                        
-                        <div class="row g-2">
-                            <div class="col-4">
-                                <a href="assets/images/rumpai1.jpg" target="_blank">
-                                    <img src="assets/images/rumpai1.jpg" class="static-img" alt="Rumpai 1" onerror="this.src='https://via.placeholder.com/150?text=Gambar+1';">
-                                </a>
-                            </div>
-                            <div class="col-4">
-                                <a href="assets/images/rumpai2.jpg" target="_blank">
-                                    <img src="assets/images/rumpai2.jpg" class="static-img" alt="Rumpai 2" onerror="this.src='https://via.placeholder.com/150?text=Gambar+2';">
-                                </a>
-                            </div>
+                        <h6 class="fw-bold text-success mb-1">Kawalan Rumpai</h6>
+                        <p class="small text-muted mb-2">Panduan penyelenggaraan lorong dan kawalan rumpai yang efektif.</p>
+                        <div class="text-center">
+                            <a href="assets/images/kawalan-rumpai.jpeg" target="_blank">
+                                <img src="assets/images/kawalan-rumpai.jpeg" class="img-fluid rounded border" alt="Kawalan Rumpai" style="max-height: 400px;">
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. Kawalan Penyakit -->
+                <div class="tab-pane fade" id="tab-penyakit">
+                    <div class="mb-3">
+                        <h6 class="fw-bold text-success mb-1">Kawalan Penyakit</h6>
+                        <p class="small text-muted mb-2">Panduan pengenalan dan kawalan penyakit pada pokok getah.</p>
+                        <div class="text-center">
+                            <a href="assets/images/kawalan-penyakit.jpeg" target="_blank">
+                                <img src="assets/images/kawalan-penyakit.jpeg" class="img-fluid rounded border" alt="Kawalan Penyakit" style="max-height: 400px;">
+                            </a>
+                        </div>
+                        <div class="text-center mt-3">
+                            <h6 class="fw-bold text-success mb-1 mt-3">Jenis-Jenis Penyakit</h6>
+                            <a href="assets/images/jenis-penyakit.jpeg" target="_blank">
+                                <img src="assets/images/jenis-penyakit.jpeg" class="img-fluid rounded border" alt="Jenis Penyakit" style="max-height: 400px;">
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 8. Kawalan Makhluk Perosak -->
+                <div class="tab-pane fade" id="tab-perosak">
+                    <div class="mb-3">
+                        <h6 class="fw-bold text-success mb-1">Kawalan Makhluk Perosak</h6>
+                        <p class="small text-muted mb-2">Panduan pengenalan dan kawalan makhluk perosak pada pokok getah.</p>
+                        <div class="text-center">
+                            <a href="assets/images/kawalan-makhluk-perosak.jpeg" target="_blank">
+                                <img src="assets/images/kawalan-makhluk-perosak.jpeg" class="img-fluid rounded border" alt="Kawalan Makhluk Perosak" style="max-height: 400px;">
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 9. Jenis-Jenis Baja -->
+                <div class="tab-pane fade" id="tab-baja">
+                    <div class="mb-3">
+                        <h6 class="fw-bold text-success mb-1">Jenis-Jenis Baja</h6>
+                        <p class="small text-muted mb-2">Panduan jenis-jenis baja yang digunakan untuk pembajaan pokok getah.</p>
+                        <div class="text-center">
+                            <a href="assets/images/jenis-baja.jpeg" target="_blank">
+                                <img src="assets/images/jenis-baja.jpeg" class="img-fluid rounded border" alt="Jenis Baja" style="max-height: 400px;">
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 10. Jenis-Jenis Nutrien dan Fungsinya -->
+                <div class="tab-pane fade" id="tab-nutrien">
+                    <div class="mb-3">
+                        <h6 class="fw-bold text-success mb-1">Jenis-Jenis Nutrien dan Fungsinya</h6>
+                        <p class="small text-muted mb-2">Panduan lengkap tentang nutrien yang diperlukan pokok getah dan fungsinya.</p>
+                        <div class="text-center">
+                            <a href="assets/images/jenis-nutrien-dan-fungsi.jpeg" target="_blank">
+                                <img src="assets/images/jenis-nutrien-dan-fungsi.jpeg" class="img-fluid rounded border" alt="Jenis Nutrien dan Fungsi" style="max-height: 400px;">
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 11. Kadar Pembajaan -->
+                <div class="tab-pane fade" id="tab-kadar">
+                    <div class="mb-3">
+                        <h6 class="fw-bold text-success mb-1">Kadar Pembajaan Pokok Getah</h6>
+                        <p class="small text-muted mb-2">Jadual kadar pembajaan mengikut umur dan jenis baja yang digunakan.</p>
+                        <div class="text-center">
+                            <a href="assets/images/kadar-pembajaan.jpeg" target="_blank">
+                                <img src="assets/images/kadar-pembajaan.jpeg" class="img-fluid rounded border" alt="Kadar Pembajaan" style="max-height: 400px;">
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 12. Jenis-Jenis Racun Rumpai -->
+                <div class="tab-pane fade" id="tab-racun">
+                    <div class="mb-3">
+                        <h6 class="fw-bold text-success mb-1">Jenis-Jenis Racun Rumpai</h6>
+                        <p class="small text-muted mb-2">Panduan lengkap jenis-jenis racun rumpai dan kadar penggunaan.</p>
+                        <div class="text-center">
+                            <a href="assets/images/jenis-racun-rumpai.jpeg" target="_blank">
+                                <img src="assets/images/jenis-racun-rumpai.jpeg" class="img-fluid rounded border" alt="Jenis Racun Rumpai" style="max-height: 400px;">
+                            </a>
                         </div>
                     </div>
                 </div>

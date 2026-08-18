@@ -90,6 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="container p-3 d-flex justify-content-center">
     <div class="card login-card overflow-hidden">
         <div class="card-header-custom text-center">
+            <img src="../assets/images/logo-risda.png" alt="Logo RISDA" class="mb-2" style="height: 70px; width: auto;">
             <h5 class="fw-bold mb-0">Portal Pentadbir RISDA</h5>
             <small class="opacity-75">Sila log masuk untuk meneruskan</small>
         </div>
