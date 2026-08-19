@@ -164,8 +164,12 @@ if (!empty($hash)) {
                             <div class="data-value"><?= htmlspecialchars($kebun['keluasan_kebun'] ?? '-') ?> Hektar</div>
                         </div>
                         <div class="col-sm-6">
-                            <div class="data-label">Lokasi / Mukim</div>
-                            <div class="data-value"><?= htmlspecialchars($kebun['lokasi_kebun'] ?? '-') ?>, <?= htmlspecialchars($kebun['mukim'] ?? '-') ?></div>
+                            <div class="data-label">Lokasi</div>
+                            <div class="data-value"><?= htmlspecialchars($kebun['lokasi_kebun'] ?? '-') ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="data-label">Mukim</div>
+                            <div class="data-value"><?= htmlspecialchars($kebun['mukim'] ?? '-') ?></div>
                         </div>
                         <div class="col-sm-6">
                             <div class="data-label">Daerah</div>
@@ -173,7 +177,11 @@ if (!empty($hash)) {
                         </div>
                         <div class="col-sm-6">
                             <div class="data-label">Klon Getah</div>
-                            <div class="data-value"><?= htmlspecialchars($kebun['klon_getah'] ?? '-') ?></div>
+                            <div class="data-value">
+                                <span class="badge-custom bg-success-subtle text-success border border-success-subtle">
+                                    <?= htmlspecialchars($kebun['klon_getah'] ?? '-') ?>
+                                </span>
+                            </div>
                         </div>
                         <div class="col-sm-6">
                             <div class="data-label">Jumlah Pokok</div>

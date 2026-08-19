@@ -50,6 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tahun_sulaman = trim($_POST['tahun_sulaman'] ?? '');
         $jarak_tanaman = trim($_POST['jarak_tanaman'] ?? '');
         $koordinat = trim($_POST['koordinat'] ?? '');
+        $pegawai_risda_kawasan = trim($_POST['pegawai_risda_kawasan'] ?? '');
         $pelan_lot_blob = null;
         
         // Validate kebun fields
@@ -119,8 +120,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             INSERT INTO kebun (
                 pekebun_id, no_lot, keluasan_kebun, lokasi_kebun, mukim, daerah,
                 klon_getah, jumlah_pokok, tahun_tanam, tahun_sulaman, jarak_tanaman,
-                koordinat, pelan_lot, qr_code_hash
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                koordinat, pelan_lot, qr_code_hash, pegawai_risda_kawasan
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         
         $tahun_tanam_val = !empty($tahun_tanam) ? (strlen($tahun_tanam) == 4 ? $tahun_tanam . '-01-01' : $tahun_tanam) : null;
@@ -129,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([
             $pekebun_id, $no_lot, $keluasan_kebun, $lokasi_kebun, $mukim, $daerah,
             $klon_getah, $jumlah_pokok, $tahun_tanam_val, $tahun_sulaman_val, $jarak_tanaman,
-            $koordinat, $pelan_lot_blob, $qr_hash
+            $koordinat, $pelan_lot_blob, $qr_hash, $pegawai_risda_kawasan
         ]);
         
         $kebun_id = $db->lastInsertId();
@@ -409,11 +410,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label for="klon_getah" class="form-label">Klon Getah *</label>
                     <select class="form-select" id="klon_getah" name="klon_getah" required>
                         <option value="">-- Pilih Klon --</option>
-                        <option value="GT1">GT1</option>
-                        <option value="RRIM600">RRIM600</option>
-                        <option value="RRIM712">RRIM712</option>
-                        <option value="BPM24">BPM24</option>
-                        <option value="Lain">Lain</option>
+                        <option value="PB 260">PB 260</option>
+                        <option value="PB 350">PB 350</option>
+                        <option value="RRIM 928">RRIM 928</option>
+                        <option value="RRIM 2001">RRIM 2001</option>
+                        <option value="RRIM 2002">RRIM 2002</option>
+                        <option value="RRIM 2023">RRIM 2023</option>
+                        <option value="RRIM 2024">RRIM 2024</option>
                     </select>
                 </div>
 
@@ -423,12 +426,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <div class="col-md-6">
                     <label for="tahun_tanam" class="form-label">Tahun Tanam</label>
-                    <input type="number" class="form-control" id="tahun_tanam" name="tahun_tanam" placeholder="Contoh: 2020" min="1900" max="2100">
+                    <input type="date" class="form-control" id="tahun_tanam" name="tahun_tanam" placeholder="Contoh: 2020" min="1900" max="2100">
                 </div>
 
                 <div class="col-md-6">
                     <label for="tahun_sulaman" class="form-label">Tahun Sulaman</label>
-                    <input type="number" class="form-control" id="tahun_sulaman" name="tahun_sulaman" placeholder="Contoh: 2023" min="1900" max="2100">
+                    <input type="date" class="form-control" id="tahun_sulaman" name="tahun_sulaman" placeholder="Contoh: 2023" min="1900" max="2100">
                 </div>
                 <div class="col-md-6">
                     <label for="jarak_tanaman" class="form-label">Jarak Tanaman</label>
@@ -438,6 +441,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="col-12">
                     <label for="koordinat" class="form-label">Koordinat (Latitude, Longitude)</label>
                     <input type="text" class="form-control" id="koordinat" name="koordinat" placeholder="Contoh: 3.1357, 101.6880">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="pegawai_risda_kawasan" class="form-label">Pegawai RISDA Kawasan</label>
+                    <select class="form-select" id="pegawai_risda_kawasan" name="pegawai_risda_kawasan" required>
+                        <option value="">-- Pilih Pegawai RISDA Kawasan --</option>
+                        <option value="Mazlan bin Jusoh">Mazlan bin Jusoh</option>
+                        <option value="Ahmad Kharsani bin Ariffin">Ahmad Kharsani bin Ariffin</option>
+                        <option value="Wan Shariman bin Wan Mamat">Wan Shariman bin Wan Mamat</option>
+                        <option value="Mohd Shahrul bin Yusop">Mohd Shahrul bin Yusop</option>
+                        <option value="Muhamad Ezri bin Rosli">Muhamad Ezri bin Rosli</option>
+                        <option value="Amirul Khusairi bin Dzu">Amirul Khusairi bin Dzu</option>
+                        <option value="Nik Mohd Abdul Hakim bin Zalani">Nik Mohd Abdul Hakim bin Zalani</option>
+                        <option value="Mohammad Izzat bin Saidi">Mohammad Izzat bin Saidi</option>
+                        <option value="Mohamad Faizul bi Hashim">Mohamad Faizul bi Hashim</option>
+                        <option value="Ahmad Firdaus bin Teh">Ahmad Firdaus bin Teh</option>
+                        <option value="Mohd Rhitaudin bin Ahmad">Mohd Rhitaudin bin Ahmad</option>
+                        <option value="Muhammad Nur Akif bin Jumaat">Muhammad Nur Akif bin Jumaat</option>
+                    </select>
                 </div>
 
                 <div class="col-12">
@@ -479,7 +501,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <option value="Lulus - Ansuran 2">Diluluskan - Ansuran 2</option>
                         <option value="Lulus - Ansuran 3">Diluluskan - Ansuran 3</option>
                         <option value="Lulus - Ansuran 4">Diluluskan - Ansuran 4</option>
-                        <option value="Belum Memohon">Belum Memohon</option>
+                        <option value="Lulus - Ansuran 5">Diluluskan - Ansuran 5</option>
                         <option value="Ditolak">Ditolak</option>    
                     </select>
                 </div>
@@ -494,7 +516,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="nama_bantuan" class="form-label">Nama Bantuan</label>
-                    <input type="text" class="form-control" id="nama_bantuan" name="nama_bantuan" placeholder="Contoh: Bantuan Musim Tengkujuh (BMT) / Skim Getah Matang">
+                    <select class="form-select" id="nama_bantuan" name="nama_bantuan">
+                        <option value="">Pilih Nama Bantuan</option>
+                        <option value="Agro@TS">Agro@TS</option>
+                        <option value="TSG-i">TSG-i</option>
+                    </select>
                 </div>
                 <div class="col-md-6">
                     <label for="jenis_tanaman_bantuan" class="form-label">Jenis Tanaman</label>

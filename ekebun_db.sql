@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS `kebun` (
   `lokasi_kebun` varchar(255) NOT NULL,
   `mukim` varchar(100) NOT NULL,
   `daerah` varchar(100) NOT NULL,
+  `pegawai_risda_kawasan` varchar(150) DEFAULT NULL,
   `keluasan_kebun` decimal(10,2) DEFAULT NULL,
   `tahun_tanam` date DEFAULT NULL,
   `tahun_sulaman` date DEFAULT NULL,

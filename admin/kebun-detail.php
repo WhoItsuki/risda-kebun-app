@@ -214,6 +214,36 @@ $has_pelan_lot = !empty($pelan_lot);
                 </div>
             </div>
 
+            <!-- Card 3: Kalkulator Ukur Lilit -->
+            <div class="card card-custom">
+                <div class="card-header-custom">
+                    <i class="bi bi-file-text-fill text-success fs-5"></i>
+                    <span>Kalkulator Ukur Lilit</span>
+                </div>
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <div class="data-label">No. Tanam Semula</div>
+                        <div class="data-value"><?= htmlspecialchars($kebun['no_tanam_semula'] ?? '-') ?></div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="data-label">Tahun Tanam Semula</div>
+                        <div class="data-value"><?= htmlspecialchars($kebun['tahun_tanam_semula'] ?? '-') ?></div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="data-label">Keluasan Diluluskan</div>
+                        <div class="data-value"><?= htmlspecialchars($kebun['keluasan_diluluskan'] ?? '-') ?> Hektar</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="data-label">Status Bantuan Ansuran</div>
+                        <div class="data-value">
+                            <span class="badge-custom bg-success text-white">
+                                <?= htmlspecialchars($kebun['bantuan_ansuran'] ?? '-') ?>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Card 3: Maklumat Bantuan Lain -->
             <div class="card card-custom">
                 <div class="card-header-custom">
@@ -280,8 +310,12 @@ $has_pelan_lot = !empty($pelan_lot);
                         <div class="data-value"><?= htmlspecialchars($kebun['keluasan_kebun']) ?> Hektar</div>
                     </div>
                     <div class="col-sm-6">
-                        <div class="data-label">Lokasi / Mukim</div>
-                        <div class="data-value"><?= htmlspecialchars($kebun['lokasi_kebun']) ?>, <?= htmlspecialchars($kebun['mukim']) ?></div>
+                        <div class="data-label">Lokasi</div>
+                        <div class="data-value"><?= htmlspecialchars($kebun['lokasi_kebun']) ?></div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="data-label">Mukim</div>
+                        <div class="data-value"><?= htmlspecialchars($kebun['mukim']) ?></div>
                     </div>
                     <div class="col-sm-6">
                         <div class="data-label">Daerah</div>
@@ -300,10 +334,15 @@ $has_pelan_lot = !empty($pelan_lot);
                         <div class="data-value"><?= htmlspecialchars($kebun['jumlah_pokok']) ?> Pokok</div>
                     </div>
                     <div class="col-sm-6">
-                        <div class="data-label">Tahun Tanam / Sulaman</div>
+                        <div class="data-label">Tarikh Tanam</div>
                         <div class="data-value">
-                            <?= !empty($kebun['tahun_tanam']) ? (strlen($kebun['tahun_tanam']) >= 4 ? substr($kebun['tahun_tanam'], 0, 4) : htmlspecialchars($kebun['tahun_tanam'])) : '-' ?> / 
-                            <?= !empty($kebun['tahun_sulaman']) ? (strlen($kebun['tahun_sulaman']) >= 4 ? substr($kebun['tahun_sulaman'], 0, 4) : htmlspecialchars($kebun['tahun_sulaman'])) : '-' ?>
+                            <?= htmlspecialchars($kebun['tahun_tanam'] ?? '-') ?>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="data-label">Tarikh Sulaman</div>
+                        <div class="data-value">
+                            <?= htmlspecialchars($kebun['tahun_sulaman'] ?? '-') ?>
                         </div>
                     </div>
                     <div class="col-sm-6">
@@ -313,6 +352,14 @@ $has_pelan_lot = !empty($pelan_lot);
                     <div class="col-12">
                         <div class="data-label">Koordinat</div>
                         <div class="data-value"><?= htmlspecialchars($kebun['koordinat'] ?? '-') ?></div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="data-label">Pegawai RISDA Kawasan</div>
+                        <div class="data-value">
+                            <span class="badge-custom bg-primary-subtle text-primary border border-primary-subtle text-black">
+                                <?= htmlspecialchars($kebun['pegawai_risda_kawasan']) ?>
+                            </span>
+                        </div>
                     </div>
                     <div class="col-12">
                         <div class="data-label">Pelan Lot</div>
