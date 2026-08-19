@@ -25,6 +25,15 @@ if (!$kebun) {
     exit();
 }
 
+// Fetch Bantuan Lain records
+$stmt_bantuan = $db->prepare("
+    SELECT * FROM bantuan_lain 
+    WHERE kebun_id = ? OR (kebun_id IS NULL AND pekebun_id = ?)
+    ORDER BY tahun_bantuan DESC, id DESC
+");
+$stmt_bantuan->execute([$kebun_id, $kebun['pekebun_id']]);
+$bantuan_lain_list = $stmt_bantuan->fetchAll();
+
 $pelan_lot = trim((string)($kebun['pelan_lot'] ?? ''));
 $has_pelan_lot = !empty($pelan_lot);
 ?>
@@ -205,6 +214,51 @@ $has_pelan_lot = !empty($pelan_lot);
                 </div>
             </div>
 
+            <!-- Card 3: Maklumat Bantuan Lain -->
+            <div class="card card-custom">
+                <div class="card-header-custom">
+                    <i class="bi bi-gift-fill text-success fs-5"></i>
+                    <span>Maklumat Bantuan Lain</span>
+                </div>
+                <?php if (!empty($bantuan_lain_list)): ?>
+                    <div class="d-flex flex-column gap-3">
+                        <?php foreach ($bantuan_lain_list as $index => $bl): ?>
+                            <div class="<?= $index > 0 ? 'pt-3 border-top' : '' ?>">
+                                <div class="row g-3">
+                                    <div class="col-sm-6">
+                                        <div class="data-label">Nama Bantuan</div>
+                                        <div class="data-value text-dark"><?= htmlspecialchars($bl['nama_bantuan']) ?></div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div class="data-label">Jenis Tanaman</div>
+                                        <div class="data-value">
+                                            <span class="badge-custom bg-light text-dark border">
+                                                <?= htmlspecialchars($bl['jenis_tanaman'] ?: '-') ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div class="data-label">Tahun Bantuan</div>
+                                        <div class="data-value"><?= htmlspecialchars($bl['tahun_bantuan'] ?: '-') ?></div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div class="data-label">Nilai Bantuan</div>
+                                        <div class="data-value text-success fw-bold">
+                                            <?= $bl['nilai_bantuan'] !== null ? 'RM ' . number_format((float)$bl['nilai_bantuan'], 2) : '-' ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <div class="info-box text-muted small">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Tiada maklumat bantuan lain didaftarkan untuk kebun ini.
+                    </div>
+                <?php endif; ?>
+            </div>
+
         </div>
 
         <!-- Kolum Kanan: Maklumat Kebun -->
@@ -247,7 +301,10 @@ $has_pelan_lot = !empty($pelan_lot);
                     </div>
                     <div class="col-sm-6">
                         <div class="data-label">Tahun Tanam / Sulaman</div>
-                        <div class="data-value"><?= htmlspecialchars($kebun['tahun_tanam']) ?> / <?= htmlspecialchars($kebun['tahun_sulaman']) ?></div>
+                        <div class="data-value">
+                            <?= !empty($kebun['tahun_tanam']) ? (strlen($kebun['tahun_tanam']) >= 4 ? substr($kebun['tahun_tanam'], 0, 4) : htmlspecialchars($kebun['tahun_tanam'])) : '-' ?> / 
+                            <?= !empty($kebun['tahun_sulaman']) ? (strlen($kebun['tahun_sulaman']) >= 4 ? substr($kebun['tahun_sulaman'], 0, 4) : htmlspecialchars($kebun['tahun_sulaman'])) : '-' ?>
+                        </div>
                     </div>
                     <div class="col-sm-6">
                         <div class="data-label">Jarak Tanaman</div>

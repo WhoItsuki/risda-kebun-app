@@ -123,9 +123,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         
+        $tahun_tanam_val = !empty($tahun_tanam) ? (strlen($tahun_tanam) == 4 ? $tahun_tanam . '-01-01' : $tahun_tanam) : null;
+        $tahun_sulaman_val = !empty($tahun_sulaman) ? (strlen($tahun_sulaman) == 4 ? $tahun_sulaman . '-01-01' : $tahun_sulaman) : null;
+
         $stmt->execute([
             $pekebun_id, $no_lot, $keluasan_kebun, $lokasi_kebun, $mukim, $daerah,
-            $klon_getah, $jumlah_pokok, $tahun_tanam, $tahun_sulaman, $jarak_tanaman,
+            $klon_getah, $jumlah_pokok, $tahun_tanam_val, $tahun_sulaman_val, $jarak_tanaman,
             $koordinat, $pelan_lot_blob, $qr_hash
         ]);
         
@@ -150,6 +153,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 !empty($tahun_tanam_semula) ? (int)$tahun_tanam_semula : null,
                 !empty($keluasan_diluluskan) ? (float)$keluasan_diluluskan : null,
                 $bantuan_ansuran
+            ]);
+        }
+
+        // Insert Bantuan Lain if provided
+        $nama_bantuan = trim($_POST['nama_bantuan'] ?? '');
+        $jenis_tanaman_bantuan = trim($_POST['jenis_tanaman_bantuan'] ?? '');
+        $tahun_bantuan = trim($_POST['tahun_bantuan'] ?? '');
+        $nilai_bantuan = trim($_POST['nilai_bantuan'] ?? '');
+
+        if (!empty($nama_bantuan) || !empty($jenis_tanaman_bantuan) || !empty($tahun_bantuan) || !empty($nilai_bantuan)) {
+            $stmt_bantuan = $db->prepare("
+                INSERT INTO bantuan_lain (pekebun_id, kebun_id, nama_bantuan, jenis_tanaman, tahun_bantuan, nilai_bantuan)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ");
+            $stmt_bantuan->execute([
+                $pekebun_id,
+                $kebun_id,
+                !empty($nama_bantuan) ? $nama_bantuan : 'Bantuan RISDA',
+                !empty($jenis_tanaman_bantuan) ? $jenis_tanaman_bantuan : null,
+                !empty($tahun_bantuan) ? (int)$tahun_bantuan : null,
+                !empty($nilai_bantuan) ? (float)$nilai_bantuan : null
             ]);
         }
         
@@ -458,6 +482,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <option value="Belum Memohon">Belum Memohon</option>
                         <option value="Ditolak">Ditolak</option>    
                     </select>
+                </div>
+            </div>
+
+            <!-- Bantuan Lain Section -->
+            <div class="section-header mt-4">
+                <i class="bi bi-gift-fill text-success"></i>
+                <span>Maklumat Bantuan Lain (Pilihan)</span>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="nama_bantuan" class="form-label">Nama Bantuan</label>
+                    <input type="text" class="form-control" id="nama_bantuan" name="nama_bantuan" placeholder="Contoh: Bantuan Musim Tengkujuh (BMT) / Skim Getah Matang">
+                </div>
+                <div class="col-md-6">
+                    <label for="jenis_tanaman_bantuan" class="form-label">Jenis Tanaman</label>
+                    <input type="text" class="form-control" id="jenis_tanaman_bantuan" name="jenis_tanaman_bantuan" placeholder="Contoh: Getah / Kelapa Sawit / Kontan">
+                </div>
+                <div class="col-md-6">
+                    <label for="tahun_bantuan" class="form-label">Tahun Bantuan</label>
+                    <input type="number" class="form-control" id="tahun_bantuan" name="tahun_bantuan" placeholder="Contoh: 2024" min="1900" max="2100">
+                </div>
+                <div class="col-md-6">
+                    <label for="nilai_bantuan" class="form-label">Nilai Bantuan (RM)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light fw-semibold text-muted">RM</span>
+                        <input type="number" class="form-control" id="nilai_bantuan" name="nilai_bantuan" step="0.01" placeholder="Contoh: 800.00">
+                    </div>
                 </div>
             </div>
 

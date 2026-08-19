@@ -29,7 +29,9 @@ CREATE TABLE IF NOT EXISTS `admins` (
   UNIQUE KEY `username` (`username`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Data exporting was unselected.
+-- Dumping data for table risda_kebun.admins: ~1 rows (approximately)
+INSERT INTO `admins` (`id`, `username`, `password`, `created_at`) VALUES
+	(1, 'admin', '$2y$10$abcdefghijklmnopqrstuuEZ4tpXm4W5SeJkDbuNdfJ.CF0.Wc2V2', '2026-08-16 07:50:20');
 
 -- Dumping structure for table risda_kebun.kebun
 CREATE TABLE IF NOT EXISTS `kebun` (
@@ -41,20 +43,20 @@ CREATE TABLE IF NOT EXISTS `kebun` (
   `mukim` varchar(100) NOT NULL,
   `daerah` varchar(100) NOT NULL,
   `keluasan_kebun` decimal(10,2) DEFAULT NULL,
-  `tahun_tanam` int DEFAULT NULL,
-  `tahun_sulaman` int DEFAULT NULL,
+  `tahun_tanam` date DEFAULT NULL,
+  `tahun_sulaman` date DEFAULT NULL,
   `klon_getah` varchar(100) DEFAULT NULL,
   `jarak_tanaman` varchar(50) DEFAULT NULL,
   `jumlah_pokok` int DEFAULT NULL,
   `koordinat` varchar(50) DEFAULT NULL,
-  `pelan_lot` varchar(255) DEFAULT NULL,
+  `pelan_lot` longblob,
   PRIMARY KEY (`id`),
   UNIQUE KEY `qr_code_hash` (`qr_code_hash`),
   KEY `pekebun_id` (`pekebun_id`),
   CONSTRAINT `kebun_ibfk_1` FOREIGN KEY (`pekebun_id`) REFERENCES `pekebun` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Data exporting was unselected.
+-- Dumping data for table risda_kebun.kebun: ~0 rows (approximately)
 
 -- Dumping structure for table risda_kebun.pekebun
 CREATE TABLE IF NOT EXISTS `pekebun` (
@@ -63,9 +65,9 @@ CREATE TABLE IF NOT EXISTS `pekebun` (
   `no_telefon` varchar(20) NOT NULL,
   `alamat` text NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Data exporting was unselected.
+-- Dumping data for table risda_kebun.pekebun: ~0 rows (approximately)
 
 -- Dumping structure for table risda_kebun.tanam_semula
 CREATE TABLE IF NOT EXISTS `tanam_semula` (
@@ -78,9 +80,28 @@ CREATE TABLE IF NOT EXISTS `tanam_semula` (
   PRIMARY KEY (`id`),
   KEY `kebun_id` (`kebun_id`),
   CONSTRAINT `tanam_semula_ibfk_1` FOREIGN KEY (`kebun_id`) REFERENCES `kebun` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Data exporting was unselected.
+-- Dumping data for table risda_kebun.tanam_semula: ~0 rows (approximately)
+
+-- Dumping structure for table risda_kebun.bantuan_lain
+CREATE TABLE IF NOT EXISTS `bantuan_lain` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `pekebun_id` int NOT NULL,
+  `kebun_id` int DEFAULT NULL,
+  `nama_bantuan` varchar(150) NOT NULL,
+  `jenis_tanaman` varchar(100) DEFAULT NULL,
+  `tahun_bantuan` int DEFAULT NULL,
+  `nilai_bantuan` decimal(10,2) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `pekebun_id` (`pekebun_id`),
+  KEY `kebun_id` (`kebun_id`),
+  CONSTRAINT `bantuan_lain_ibfk_1` FOREIGN KEY (`pekebun_id`) REFERENCES `pekebun` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `bantuan_lain_ibfk_2` FOREIGN KEY (`kebun_id`) REFERENCES `kebun` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- Dumping data for table risda_kebun.bantuan_lain: ~0 rows (approximately)
 
 /*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
 /*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;

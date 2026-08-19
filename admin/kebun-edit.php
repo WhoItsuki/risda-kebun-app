@@ -39,6 +39,11 @@ $stmt_pekebun = $db->prepare("SELECT id, nama, no_telefon, alamat FROM pekebun O
 $stmt_pekebun->execute();
 $pekebun_list = $stmt_pekebun->fetchAll();
 
+// Fetch existing Bantuan Lain details
+$stmt_bantuan = $db->prepare("SELECT * FROM bantuan_lain WHERE kebun_id = ? OR (kebun_id IS NULL AND pekebun_id = ?) ORDER BY id DESC LIMIT 1");
+$stmt_bantuan->execute([$kebun_id, $kebun['pekebun_id']]);
+$bantuan_lain = $stmt_bantuan->fetch();
+
 // Check if current kebun has a pelan lot image/file
 $pelan_lot_blob = $kebun['pelan_lot'] ?? null;
 $has_pelan_lot = !empty($pelan_lot_blob);
@@ -97,8 +102,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $daerah = trim($_POST['daerah'] ?? '');
         $klon_getah = trim($_POST['klon_getah'] ?? '');
         $jumlah_pokok = !empty($_POST['jumlah_pokok']) ? (int)$_POST['jumlah_pokok'] : null;
-        $tahun_tanam = !empty($_POST['tahun_tanam']) ? (int)$_POST['tahun_tanam'] : null;
-        $tahun_sulaman = !empty($_POST['tahun_sulaman']) ? (int)$_POST['tahun_sulaman'] : null;
+        $tahun_tanam = !empty($_POST['tahun_tanam']) ? (strlen(trim((string)$_POST['tahun_tanam'])) == 4 ? trim((string)$_POST['tahun_tanam']) . '-01-01' : trim((string)$_POST['tahun_tanam'])) : null;
+        $tahun_sulaman = !empty($_POST['tahun_sulaman']) ? (strlen(trim((string)$_POST['tahun_sulaman'])) == 4 ? trim((string)$_POST['tahun_sulaman']) . '-01-01' : trim((string)$_POST['tahun_sulaman'])) : null;
         $jarak_tanaman = trim($_POST['jarak_tanaman'] ?? '');
         $koordinat = trim($_POST['koordinat'] ?? '');
 
@@ -239,6 +244,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
         }
 
+        // 4. Handle Bantuan Lain Data
+        $bantuan_lain_id = (int)($_POST['bantuan_lain_id'] ?? 0);
+        $nama_bantuan = trim($_POST['nama_bantuan'] ?? '');
+        $jenis_tanaman_bantuan = trim($_POST['jenis_tanaman_bantuan'] ?? '');
+        $tahun_bantuan = !empty($_POST['tahun_bantuan']) ? (int)$_POST['tahun_bantuan'] : null;
+        $nilai_bantuan = !empty($_POST['nilai_bantuan']) ? (float)$_POST['nilai_bantuan'] : null;
+
+        $has_bantuan_input = (!empty($nama_bantuan) || !empty($jenis_tanaman_bantuan) || !empty($tahun_bantuan) || !empty($nilai_bantuan));
+
+        if ($bantuan_lain_id > 0) {
+            if ($has_bantuan_input) {
+                // Update existing Bantuan Lain
+                $stmt_upd_bantuan = $db->prepare("
+                    UPDATE bantuan_lain SET
+                        pekebun_id = ?,
+                        kebun_id = ?,
+                        nama_bantuan = ?,
+                        jenis_tanaman = ?,
+                        tahun_bantuan = ?,
+                        nilai_bantuan = ?
+                    WHERE id = ?
+                ");
+                $stmt_upd_bantuan->execute([
+                    $pekebun_id,
+                    $kebun_id,
+                    !empty($nama_bantuan) ? $nama_bantuan : 'Bantuan RISDA',
+                    $jenis_tanaman_bantuan,
+                    $tahun_bantuan,
+                    $nilai_bantuan,
+                    $bantuan_lain_id
+                ]);
+            } else {
+                // Delete if cleared
+                $stmt_del_bantuan = $db->prepare("DELETE FROM bantuan_lain WHERE id = ?");
+                $stmt_del_bantuan->execute([$bantuan_lain_id]);
+            }
+        } elseif ($has_bantuan_input) {
+            // Insert new Bantuan Lain
+            $stmt_ins_bantuan = $db->prepare("
+                INSERT INTO bantuan_lain (pekebun_id, kebun_id, nama_bantuan, jenis_tanaman, tahun_bantuan, nilai_bantuan)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ");
+            $stmt_ins_bantuan->execute([
+                $pekebun_id,
+                $kebun_id,
+                !empty($nama_bantuan) ? $nama_bantuan : 'Bantuan RISDA',
+                $jenis_tanaman_bantuan,
+                $tahun_bantuan,
+                $nilai_bantuan
+            ]);
+        }
+
         $db->commit();
 
         $success = "Rekod kebun bagi No. Lot: " . htmlspecialchars($no_lot) . " telah berjaya dikemaskini!";
@@ -256,6 +313,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ");
         $stmt->execute([$kebun_id]);
         $kebun = $stmt->fetch();
+
+        // Refresh Bantuan Lain
+        $stmt_bantuan = $db->prepare("SELECT * FROM bantuan_lain WHERE kebun_id = ? OR (kebun_id IS NULL AND pekebun_id = ?) ORDER BY id DESC LIMIT 1");
+        $stmt_bantuan->execute([$kebun_id, $kebun['pekebun_id']]);
+        $bantuan_lain = $stmt_bantuan->fetch();
 
         $pelan_lot_blob = $kebun['pelan_lot'] ?? null;
         $has_pelan_lot = !empty($pelan_lot_blob);
@@ -565,12 +627,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <div class="col-md-6">
                     <label for="tahun_tanam" class="form-label">Tahun Tanam</label>
-                    <input type="number" class="form-control" id="tahun_tanam" name="tahun_tanam" value="<?= htmlspecialchars($kebun['tahun_tanam'] ?? '') ?>" min="1900" max="2100">
+                    <input type="number" class="form-control" id="tahun_tanam" name="tahun_tanam" value="<?= !empty($kebun['tahun_tanam']) ? (strlen($kebun['tahun_tanam']) >= 4 ? substr($kebun['tahun_tanam'], 0, 4) : htmlspecialchars($kebun['tahun_tanam'])) : '' ?>" min="1900" max="2100">
                 </div>
 
                 <div class="col-md-6">
                     <label for="tahun_sulaman" class="form-label">Tahun Sulaman</label>
-                    <input type="number" class="form-control" id="tahun_sulaman" name="tahun_sulaman" value="<?= htmlspecialchars($kebun['tahun_sulaman'] ?? '') ?>" min="1900" max="2100">
+                    <input type="number" class="form-control" id="tahun_sulaman" name="tahun_sulaman" value="<?= !empty($kebun['tahun_sulaman']) ? (strlen($kebun['tahun_sulaman']) >= 4 ? substr($kebun['tahun_sulaman'], 0, 4) : htmlspecialchars($kebun['tahun_sulaman'])) : '' ?>" min="1900" max="2100">
                 </div>
                 <div class="col-md-6">
                     <label for="jarak_tanaman" class="form-label">Jarak Tanaman</label>
@@ -670,6 +732,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <option value="<?= htmlspecialchars($current_ansuran) ?>" selected><?= htmlspecialchars($current_ansuran) ?></option>
                         <?php endif; ?>
                     </select>
+                </div>
+            </div>
+
+            <!-- Bantuan Lain Section -->
+            <div class="section-header mt-4">
+                <i class="bi bi-gift-fill text-success"></i>
+                <span>Maklumat Bantuan Lain</span>
+            </div>
+
+            <input type="hidden" name="bantuan_lain_id" value="<?= htmlspecialchars($bantuan_lain['id'] ?? '') ?>">
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="nama_bantuan" class="form-label">Nama Bantuan</label>
+                    <input type="text" class="form-control" id="nama_bantuan" name="nama_bantuan" value="<?= htmlspecialchars($bantuan_lain['nama_bantuan'] ?? '') ?>" placeholder="Contoh: Bantuan Musim Tengkujuh (BMT) / Skim Getah Matang">
+                </div>
+                <div class="col-md-6">
+                    <label for="jenis_tanaman_bantuan" class="form-label">Jenis Tanaman</label>
+                    <input type="text" class="form-control" id="jenis_tanaman_bantuan" name="jenis_tanaman_bantuan" value="<?= htmlspecialchars($bantuan_lain['jenis_tanaman'] ?? '') ?>" placeholder="Contoh: Getah / Kelapa Sawit / Kontan">
+                </div>
+                <div class="col-md-6">
+                    <label for="tahun_bantuan" class="form-label">Tahun Bantuan</label>
+                    <input type="number" class="form-control" id="tahun_bantuan" name="tahun_bantuan" value="<?= htmlspecialchars($bantuan_lain['tahun_bantuan'] ?? '') ?>" placeholder="Contoh: 2024" min="1900" max="2100">
+                </div>
+                <div class="col-md-6">
+                    <label for="nilai_bantuan" class="form-label">Nilai Bantuan (RM)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light fw-semibold text-muted">RM</span>
+                        <input type="number" class="form-control" id="nilai_bantuan" name="nilai_bantuan" step="0.01" value="<?= htmlspecialchars($bantuan_lain['nilai_bantuan'] ?? '') ?>" placeholder="Contoh: 800.00">
+                    </div>
                 </div>
             </div>
 

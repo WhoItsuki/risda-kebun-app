@@ -63,7 +63,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt_ts = $db->prepare("DELETE FROM tanam_semula WHERE kebun_id = ?");
             $stmt_ts->execute([$kebun_id]);
 
-            // 2. Delete the Kebun record
+            // 2. Delete associated Bantuan Lain records (also enforced via FK ON DELETE CASCADE)
+            $stmt_bl = $db->prepare("DELETE FROM bantuan_lain WHERE kebun_id = ?");
+            $stmt_bl->execute([$kebun_id]);
+
+            // 3. Delete the Kebun record
             $stmt_k = $db->prepare("DELETE FROM kebun WHERE id = ?");
             $stmt_k->execute([$kebun_id]);
 

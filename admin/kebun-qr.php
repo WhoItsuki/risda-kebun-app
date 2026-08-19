@@ -108,7 +108,7 @@ $qr_api_url = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=1
             <img src="../assets/images/logo-risda.png" alt="Logo RISDA" style="height: 40px; width: auto; margin-right: 0.75rem;">
             Pentadbir RISDA
         </a>
-        <a href="kebun-view.php?id=<?= $kebun['id'] ?>" class="btn btn-outline-light btn-sm rounded-pill px-3">
+        <a href="kebun-detail.php?id=<?= $kebun['id'] ?>" class="btn btn-outline-light btn-sm rounded-pill px-3">
             <i class="bi bi-arrow-left me-1"></i> Kembali ke Butiran Kebun
         </a>
     </div>
