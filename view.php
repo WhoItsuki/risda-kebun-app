@@ -188,15 +188,33 @@ if (!empty($hash)) {
                             <div class="data-value"><?= htmlspecialchars($kebun['jumlah_pokok'] ?? '-') ?> Pokok</div>
                         </div>
                         <div class="col-sm-6">
-                            <div class="data-label">Tahun Tanam / Sulaman</div>
+                            <div class="data-label">Tarikh Tanam</div>
                             <div class="data-value">
-                                <?= !empty($kebun['tahun_tanam']) ? (strlen($kebun['tahun_tanam']) >= 4 ? substr($kebun['tahun_tanam'], 0, 4) : htmlspecialchars($kebun['tahun_tanam'])) : '-' ?> / 
-                                <?= !empty($kebun['tahun_sulaman']) ? (strlen($kebun['tahun_sulaman']) >= 4 ? substr($kebun['tahun_sulaman'], 0, 4) : htmlspecialchars($kebun['tahun_sulaman'])) : '-' ?>
+                                <?= htmlspecialchars($kebun['tahun_tanam'] ?? '-') ?> 
+                                
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="data-label">Tarikh Sulaman</div>
+                            <div class="data-value">
+                                <?= htmlspecialchars($kebun['tahun_sulaman'] ?? '-') ?>
                             </div>
                         </div>
                         <div class="col-sm-6">
                             <div class="data-label">Jarak Tanaman</div>
                             <div class="data-value"><?= htmlspecialchars($kebun['jarak_tanaman'] ?? '-') ?></div>
+                        </div>
+                        <div class="col-6">
+                        <div class="data-label">Koordinat</div>
+                        <div class="data-value"><?= htmlspecialchars($kebun['koordinat'] ?? '-') ?></div>
+                    </div>
+                        <div class="col-sm-6">
+                        <div class="data-label">Pegawai RISDA Kawasan</div>
+                            <div class="data-value">
+                                <span class="badge-custom bg-primary-subtle text-primary border border-primary-subtle text-black">
+                                    <?= htmlspecialchars($kebun['pegawai_risda_kawasan']) ?>
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -229,6 +247,8 @@ if (!empty($hash)) {
                 </div>
             </div>
         </div>
+
+        
 
         <!-- Card: Maklumat Bantuan Lain -->
         <div class="card card-custom mb-3">
@@ -311,6 +331,44 @@ if (!empty($hash)) {
                     Tiada gambar pelan lot dimuat naik untuk kebun ini.
                 </div>
             <?php endif; ?>
+        </div>
+        <!-- Card: Kalkulator Ukur Lilit (Dynamic via JS) -->
+        <div class="card card-custom mb-3">
+            <div class="card-header-custom">
+                <i class="bi bi-calculator-fill text-success fs-5"></i>
+                <span>Kalkulator Ukur Lilit (Jadual Keremajaan)</span>
+            </div>
+            
+            <!-- Input Form Tarikh -->
+            <div class="row g-3 mb-3">
+                <div class="col-6">
+                    <label class="data-label form-label">Tarikh Tanam (Mula)</label>
+                    <input type="date" class="form-control form-control-sm" id="tarikh_mula" value="<?= htmlspecialchars($kebun['tahun_tanam'] ?? '') ?>" readonly style="background-color: #f0f0f0;">
+                </div>
+                <div class="col-6">
+                    <label class="data-label form-label text-success fw-bold">Tarikh Lawatan (Tamat)</label>
+                    <input type="date" class="form-control form-control-sm border-success" id="tarikh_tamat" value="<?= date('Y-m-d') ?>">
+                </div>
+            </div>
+
+            <!-- Hasil Kalkulator -->
+            <div class="info-box bg-light border rounded p-3">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="data-label">Anggaran Ukur Lilit</div>
+                        <div class="fs-4 fw-bold text-success" id="res_ukur_lilit">0.00 cm</div>
+                        <div class="small text-muted" id="res_total_bulan">(0 Bulan)</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="data-label">Tempoh Usia Tanaman</div>
+                        <div class="data-value mt-1" id="res_usia">-</div>
+                    </div>
+                    <div class="col-12 border-top pt-2">
+                        <div class="data-label">Status Kematangan Torehan</div>
+                        <span class="badge-custom bg-secondary text-white" id="res_status">Mengira...</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Panduan Pengurusan Kebun (Statik) -->
@@ -503,5 +561,99 @@ if (!empty($hash)) {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const inputMula = document.getElementById('tarikh_mula');
+    const inputTamat = document.getElementById('tarikh_tamat');
+
+    function kiraUkurLilitJS() {
+        let valMula = inputMula ? inputMula.value : '';
+        let valTamat = inputTamat ? inputTamat.value : '';
+
+        const elUkurLilit = document.getElementById('res_ukur_lilit');
+        const elTotalBulan = document.getElementById('res_total_bulan');
+        const elUsia = document.getElementById('res_usia');
+        const elStatus = document.getElementById('res_status');
+
+        if (!valMula || !valTamat) {
+            elUkurLilit.innerText = '0.00 cm';
+            elTotalBulan.innerText = '(0 Bulan)';
+            elUsia.innerText = '-';
+            elStatus.innerText = 'Tiada Data Tarikh';
+            elStatus.className = 'badge-custom bg-secondary text-white';
+            return;
+        }
+
+        // Formatkan jika valMula hanya mengandungi tahun (contoh: "2020")
+        if (valMula.length === 4) {
+            valMula += '-01-01';
+        }
+
+        let d1 = new Date(valMula);
+        let d2 = new Date(valTamat);
+
+        if (isNaN(d1.getTime()) || isNaN(d2.getTime())) {
+            elStatus.innerText = 'Format Tarikh Tidak Sah';
+            elStatus.className = 'badge-custom bg-danger text-white';
+            return;
+        }
+
+        if (d1 > d2) {
+            elUkurLilit.innerText = '0.00 cm';
+            elTotalBulan.innerText = '(0 Bulan)';
+            elUsia.innerText = 'Tarikh Tidak Sah';
+            elStatus.innerText = 'Ralat Tarikh (Mula > Akhir)';
+            elStatus.className = 'badge-custom bg-danger text-white';
+            return;
+        }
+
+        // Kira julat tahun dan bulan
+        let years = d2.getFullYear() - d1.getFullYear();
+        let months = d2.getMonth() - d1.getMonth();
+        let days = d2.getDate() - d1.getDate();
+
+        if (days < 0) {
+            months--;
+        }
+        if (months < 0) {
+            years--;
+            months += 12;
+        }
+
+        let totalBulan = (years * 12) + months;
+        if (totalBulan < 0) totalBulan = 0;
+
+        // Formula Keremajaan RISDA: (Total Bulan * 10) / 12
+        let ukurLilit = (totalBulan * 10) / 12;
+
+        // Format Teks Usia
+        let usiaText = [];
+        if (years > 0) usiaText.push(years + ' Tahun');
+        if (months > 0) usiaText.push(months + ' Bulan');
+        let usiaStr = usiaText.length > 0 ? usiaText.join(' ') : '0 Bulan';
+
+        // Kemaskini Paparan
+        elUkurLilit.innerText = ukurLilit.toFixed(2) + ' cm';
+        elTotalBulan.innerText = '(' + totalBulan + ' Bulan)';
+        elUsia.innerText = usiaStr;
+
+        if (ukurLilit >= 45.0) {
+            elStatus.innerText = 'Matang (Sedia Ditoreh)';
+            elStatus.className = 'badge-custom bg-success text-white';
+        } else {
+            elStatus.innerText = 'Belum Matang';
+            elStatus.className = 'badge-custom bg-warning text-dark';
+        }
+    }
+
+    if (inputTamat) {
+        inputTamat.addEventListener('change', kiraUkurLilitJS);
+        inputTamat.addEventListener('input', kiraUkurLilitJS);
+    }
+
+    // Jalankan pengiraan pertama kali secara automatik semasa muat halaman
+    kiraUkurLilitJS();
+});
+</script>
 </body>
 </html>

@@ -609,15 +609,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $current_klon = $kebun['klon_getah'];
                     ?>
                     <select class="form-select" id="klon_getah" name="klon_getah" required>
-                        <option value="">-- Pilih Klon --</option>
-                        <?php foreach ($klon_options as $option): ?>
-                            <option value="<?= $option ?>" <?= ($current_klon === $option) ? 'selected' : '' ?>>
-                                <?= $option ?>
-                            </option>
-                        <?php endforeach; ?>
-                        <?php if (!in_array($current_klon, $klon_options) && !empty($current_klon)): ?>
-                            <option value="<?= htmlspecialchars($current_klon) ?>" selected><?= htmlspecialchars($current_klon) ?></option>
-                        <?php endif; ?>
+                        <option value="<?= htmlspecialchars($kebun['klon_getah']) ?>"><?php echo $kebun['klon_getah'];?></option>
+                        <option value="PB 260">PB 260</option>
+                        <option value="PB 350">PB 350</option>
+                        <option value="RRIM 928">RRIM 928</option>
+                        <option value="RRIM 2001">RRIM 2001</option>
+                        <option value="RRIM 2002">RRIM 2002</option>
+                        <option value="RRIM 2023">RRIM 2023</option>
+                        <option value="RRIM 2024">RRIM 2024</option>
+                        
                     </select>
                 </div>
 
@@ -627,12 +627,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <div class="col-md-6">
                     <label for="tahun_tanam" class="form-label">Tahun Tanam</label>
-                    <input type="number" class="form-control" id="tahun_tanam" name="tahun_tanam" value="<?= !empty($kebun['tahun_tanam']) ? (strlen($kebun['tahun_tanam']) >= 4 ? substr($kebun['tahun_tanam'], 0, 4) : htmlspecialchars($kebun['tahun_tanam'])) : '' ?>" min="1900" max="2100">
+                    <input type="date" class="form-control" id="tahun_tanam" name="tahun_tanam" value="<?= htmlspecialchars($kebun['tahun_tanam'] ?? '') ?>" min="1900" max="2100">
                 </div>
 
                 <div class="col-md-6">
                     <label for="tahun_sulaman" class="form-label">Tahun Sulaman</label>
-                    <input type="number" class="form-control" id="tahun_sulaman" name="tahun_sulaman" value="<?= !empty($kebun['tahun_sulaman']) ? (strlen($kebun['tahun_sulaman']) >= 4 ? substr($kebun['tahun_sulaman'], 0, 4) : htmlspecialchars($kebun['tahun_sulaman'])) : '' ?>" min="1900" max="2100">
+                    <input type="date" class="form-control" id="tahun_sulaman" name="tahun_sulaman" value="<?= htmlspecialchars($kebun['tahun_sulaman'] ?? '') ?>" min="1900" max="2100">
                 </div>
                 <div class="col-md-6">
                     <label for="jarak_tanaman" class="form-label">Jarak Tanaman</label>
@@ -643,7 +643,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label for="koordinat" class="form-label">Koordinat (Latitude, Longitude)</label>
                     <input type="text" class="form-control" id="koordinat" name="koordinat" value="<?= htmlspecialchars($kebun['koordinat'] ?? '') ?>" placeholder="Contoh: 3.1357, 101.6880">
                 </div>
-
+                
+                <div class="col-md-6">
+                    <label for="pegawai_risda_kawasan" class="form-label">Pegawai RISDA Kawasan</label>
+                    <select class="form-select" id="pegawai_risda_kawasan" name="pegawai_risda_kawasan" required>
+                        <option value="<?= htmlspecialchars($kebun['pegawai_risda_kawasan'] ?? '') ?>"><?php echo $kebun['pegawai_risda_kawasan'];?></option>
+                        <option value="Mazlan bin Jusoh">Mazlan bin Jusoh</option>
+                        <option value="Ahmad Kharsani bin Ariffin">Ahmad Kharsani bin Ariffin</option>
+                        <option value="Wan Shariman bin Wan Mamat">Wan Shariman bin Wan Mamat</option>
+                        <option value="Mohd Shahrul bin Yusop">Mohd Shahrul bin Yusop</option>
+                        <option value="Muhamad Ezri bin Rosli">Muhamad Ezri bin Rosli</option>
+                        <option value="Amirul Khusairi bin Dzu">Amirul Khusairi bin Dzu</option>
+                        <option value="Nik Mohd Abdul Hakim bin Zalani">Nik Mohd Abdul Hakim bin Zalani</option>
+                        <option value="Mohammad Izzat bin Saidi">Mohammad Izzat bin Saidi</option>
+                        <option value="Mohamad Faizul bi Hashim">Mohamad Faizul bi Hashim</option>
+                        <option value="Ahmad Firdaus bin Teh">Ahmad Firdaus bin Teh</option>
+                        <option value="Mohd Rhitaudin bin Ahmad">Mohd Rhitaudin bin Ahmad</option>
+                        <option value="Muhammad Nur Akif bin Jumaat">Muhammad Nur Akif bin Jumaat</option>
+                    </select>
+                </div>
                 <div class="col-12">
                     <label for="pelan_lot_file" class="form-label">Pelan Lot (Muat Naik Fail Baharu / Tukar)</label>
                     
@@ -716,7 +734,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             'Lulus - Ansuran 2' => 'Diluluskan - Ansuran 2',
                             'Lulus - Ansuran 3' => 'Diluluskan - Ansuran 3',
                             'Lulus - Ansuran 4' => 'Diluluskan - Ansuran 4',
-                            'Belum Memohon'     => 'Belum Memohon',
+                            'Lulus - Ansuran 5' => 'Diluluskan - Ansuran 5',
                             'Ditolak'           => 'Ditolak'
                         ];
                         $current_ansuran = $kebun['bantuan_ansuran'] ?? '';
@@ -746,7 +764,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="nama_bantuan" class="form-label">Nama Bantuan</label>
-                    <input type="text" class="form-control" id="nama_bantuan" name="nama_bantuan" value="<?= htmlspecialchars($bantuan_lain['nama_bantuan'] ?? '') ?>" placeholder="Contoh: Bantuan Musim Tengkujuh (BMT) / Skim Getah Matang">
+                    <select class="form-select" id="nama_bantuan" name="nama_bantuan">
+                        <option value="">Pilih Nama Bantuan</option>
+                        <option value="Agro@TS">Agro@TS</option>
+                        <option value="TSG-i">TSG-i</option>
+                    </select>
                 </div>
                 <div class="col-md-6">
                     <label for="jenis_tanaman_bantuan" class="form-label">Jenis Tanaman</label>

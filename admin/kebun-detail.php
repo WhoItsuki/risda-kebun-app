@@ -215,34 +215,7 @@ $has_pelan_lot = !empty($pelan_lot);
             </div>
 
             <!-- Card 3: Kalkulator Ukur Lilit -->
-            <div class="card card-custom">
-                <div class="card-header-custom">
-                    <i class="bi bi-file-text-fill text-success fs-5"></i>
-                    <span>Kalkulator Ukur Lilit</span>
-                </div>
-                <div class="row g-3">
-                    <div class="col-sm-6">
-                        <div class="data-label">No. Tanam Semula</div>
-                        <div class="data-value"><?= htmlspecialchars($kebun['no_tanam_semula'] ?? '-') ?></div>
-                    </div>
-                    <div class="col-sm-6">
-                        <div class="data-label">Tahun Tanam Semula</div>
-                        <div class="data-value"><?= htmlspecialchars($kebun['tahun_tanam_semula'] ?? '-') ?></div>
-                    </div>
-                    <div class="col-sm-6">
-                        <div class="data-label">Keluasan Diluluskan</div>
-                        <div class="data-value"><?= htmlspecialchars($kebun['keluasan_diluluskan'] ?? '-') ?> Hektar</div>
-                    </div>
-                    <div class="col-sm-6">
-                        <div class="data-label">Status Bantuan Ansuran</div>
-                        <div class="data-value">
-                            <span class="badge-custom bg-success text-white">
-                                <?= htmlspecialchars($kebun['bantuan_ansuran'] ?? '-') ?>
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            
 
             <!-- Card 3: Maklumat Bantuan Lain -->
             <div class="card card-custom">
