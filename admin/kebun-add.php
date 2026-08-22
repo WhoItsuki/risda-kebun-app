@@ -4,39 +4,24 @@ requireAdminLogin();
 require_once '../config/database.php';
 
 $db = getDBConnection();
-$pekebun_list = [];
 $error = '';
 $success = '';
 
-// Fetch existing pekebun list
-$stmt = $db->prepare("SELECT id, nama, no_telefon, alamat FROM pekebun ORDER BY nama ASC");
-$stmt->execute();
-$pekebun_list = $stmt->fetchAll();
-
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $mode = $_POST['mode'] ?? 'existing'; // 'existing' or 'new_pekebun'
-    
     try {
         // New Pekebun Data
-        if ($mode === 'new_pekebun') {
-            $nama = trim($_POST['nama_pekebun'] ?? '');
-            $no_telefon = trim($_POST['no_telefon'] ?? '');
-            $alamat = trim($_POST['alamat'] ?? '');
-            
-            if (empty($nama) || empty($no_telefon) || empty($alamat)) {
-                throw new Exception('Sila isi semua maklumat pekebun.');
-            }
-            
-            $stmt = $db->prepare("INSERT INTO pekebun (nama, no_telefon, alamat) VALUES (?, ?, ?)");
-            $stmt->execute([$nama, $no_telefon, $alamat]);
-            $pekebun_id = $db->lastInsertId();
-        } else {
-            $pekebun_id = (int)($_POST['pekebun_id'] ?? 0);
-            if ($pekebun_id <= 0) {
-                throw new Exception('Sila pilih pekebun yang sah.');
-            }
+        $nama = trim($_POST['nama_pekebun'] ?? '');
+        $no_telefon = trim($_POST['no_telefon'] ?? '');
+        $alamat = trim($_POST['alamat'] ?? '');
+        
+        if (empty($nama) || empty($no_telefon) || empty($alamat)) {
+            throw new Exception('Sila isi semua maklumat pekebun.');
         }
+        
+        $stmt = $db->prepare("INSERT INTO pekebun (nama, no_telefon, alamat) VALUES (?, ?, ?)");
+        $stmt->execute([$nama, $no_telefon, $alamat]);
+        $pekebun_id = $db->lastInsertId();
         
         // Kebun Data
         $no_lot = trim($_POST['no_lot'] ?? '');
@@ -44,7 +29,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $lokasi_kebun = trim($_POST['lokasi_kebun'] ?? '');
         $mukim = trim($_POST['mukim'] ?? '');
         $daerah = trim($_POST['daerah'] ?? '');
-        $klon_getah = trim($_POST['klon_getah'] ?? '');
+        
+        // Get selected klon getah from checkboxes
+        $klon_getah_selected = $_POST['klon_getah'] ?? [];
+        if (empty($klon_getah_selected)) {
+            throw new Exception('Sila pilih sekurang-kurangnya satu klon getah.');
+        }
+        $klon_getah = implode(', ', $klon_getah_selected); // Store as comma-separated string
+        
         $jumlah_pokok = (int)($_POST['jumlah_pokok'] ?? 0);
         $tahun_tanam = trim($_POST['tahun_tanam'] ?? '');
         $tahun_sulaman = trim($_POST['tahun_sulaman'] ?? '');
@@ -54,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pelan_lot_blob = null;
         
         // Validate kebun fields
-        if (empty($no_lot) || empty($keluasan_kebun) || empty($lokasi_kebun) || empty($daerah) || empty($klon_getah)) {
+        if (empty($no_lot) || empty($keluasan_kebun) || empty($lokasi_kebun) || empty($daerah)) {
             throw new Exception('Sila isi semua maklumat kebun yang diperlukan.');
         }
         
@@ -247,30 +239,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin-top: 1.5rem;
             margin-bottom: 1rem;
         }
-        .tab-toggle {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
-        }
-        .tab-toggle .btn {
-            flex: 1;
-            border-radius: 8px;
-            font-weight: 600;
-        }
-        .tab-toggle .btn-outline-secondary:not(.active) {
-            border-color: var(--card-border);
-            color: #6c757d;
-        }
-        .tab-toggle .btn.active {
-            background-color: var(--accent-color);
-            border-color: var(--accent-color);
-        }
-        .tab-content {
-            display: none;
-        }
-        .tab-content.active {
-            display: block;
-        }
         .info-box {
             background: #f8f9fa;
             border: 1px solid var(--card-border);
@@ -278,6 +246,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 0.85rem;
             font-size: 0.875rem;
             color: #6c757d;
+        }
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+        }
+        .checkbox-group .form-check {
+            margin: 0;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .checkbox-group .form-check:hover {
+            background-color: #e9ecef;
+        }
+        .checkbox-group .form-check-input:checked {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+        .checkbox-group .form-check-label {
+            font-weight: 500;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .selected-klon-badge {
+            display: inline-block;
+            background-color: var(--accent-color);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin: 0.25rem;
+            font-weight: 500;
+        }
+        .selected-klon-container {
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background: #ffffff;
+            border-radius: 8px;
+            border: 1px dashed var(--card-border);
+            min-height: 40px;
         }
     </style>
 </head>
@@ -332,50 +345,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <span>Maklumat Pekebun</span>
             </div>
 
-            <!-- Toggle Existing or New Pekebun -->
-            <div class="tab-toggle">
-                <button type="button" class="btn btn-outline-secondary active" onclick="switchMode('existing')">
-                    <i class="bi bi-check-circle me-1"></i> Pekebun Sedia Ada
-                </button>
-                <button type="button" class="btn btn-outline-secondary" onclick="switchMode('new_pekebun')">
-                    <i class="bi bi-person-plus me-1"></i> Pekebun Baru
-                </button>
-            </div>
-
-            <!-- Existing Pekebun Tab -->
-            <div id="existing-tab" class="tab-content active">
-                <div class="mb-3">
-                    <label for="pekebun_id" class="form-label">Pilih Pekebun</label>
-                    <select class="form-select" id="pekebun_id" name="pekebun_id">
-                        <option value="">-- Sila Pilih Pekebun --</option>
-                        <?php foreach ($pekebun_list as $pekebun): ?>
-                            <option value="<?= $pekebun['id'] ?>">
-                                <?= htmlspecialchars($pekebun['nama']) ?> (<?= htmlspecialchars($pekebun['no_telefon']) ?>)
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+            <!-- New Pekebun Fields -->
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="nama_pekebun" class="form-label">Nama Pekebun *</label>
+                    <input type="text" class="form-control" id="nama_pekebun" name="nama_pekebun" required placeholder="Nama pekebun">
+                </div>
+                <div class="col-md-6">
+                    <label for="no_telefon" class="form-label">No. Telefon *</label>
+                    <input type="tel" class="form-control" id="no_telefon" name="no_telefon" required placeholder="Contoh: 0123456789">
+                </div>
+                <div class="col-12">
+                    <label for="alamat" class="form-label">Alamat *</label>
+                    <textarea class="form-control" id="alamat" name="alamat" rows="3" required placeholder="Alamat pekebun"></textarea>
                 </div>
             </div>
-
-            <!-- New Pekebun Tab -->
-            <div id="new_pekebun-tab" class="tab-content">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="nama_pekebun" class="form-label">Nama Pekebun</label>
-                        <input type="text" class="form-control" id="nama_pekebun" name="nama_pekebun" placeholder="Nama pekebun">
-                    </div>
-                    <div class="col-md-6">
-                        <label for="no_telefon" class="form-label">No. Telefon</label>
-                        <input type="tel" class="form-control" id="no_telefon" name="no_telefon" placeholder="Contoh: 0123456789">
-                    </div>
-                    <div class="col-12">
-                        <label for="alamat" class="form-label">Alamat</label>
-                        <textarea class="form-control" id="alamat" name="alamat" rows="3" placeholder="Alamat pekebun"></textarea>
-                    </div>
-                </div>
-            </div>
-
-            <input type="hidden" id="mode-input" name="mode" value="existing">
 
             <!-- Kebun Section -->
             <div class="section-header mt-4">
@@ -390,7 +374,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <div class="col-md-6">
                     <label for="keluasan_kebun" class="form-label">Keluasan Kebun (Hektar) *</label>
-                    <input type="number" class="form-control" id="keluasan_kebun" name="keluasan_kebun" required step="0.01" placeholder="Contoh: 2.5">
+                    <input type="number" class="form-control" id="keluasan_kebun" name="keluasan_kebun" required step="0.0001" placeholder="Contoh: 2.5">
                 </div>
 
                 <div class="col-md-6">
@@ -406,18 +390,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label for="daerah" class="form-label">Daerah *</label>
                     <input type="text" class="form-control" id="daerah" name="daerah" required placeholder="Nama daerah">
                 </div>
-                <div class="col-md-6">
-                    <label for="klon_getah" class="form-label">Klon Getah *</label>
-                    <select class="form-select" id="klon_getah" name="klon_getah" required>
-                        <option value="">-- Pilih Klon --</option>
-                        <option value="PB 260">PB 260</option>
-                        <option value="PB 350">PB 350</option>
-                        <option value="RRIM 928">RRIM 928</option>
-                        <option value="RRIM 2001">RRIM 2001</option>
-                        <option value="RRIM 2002">RRIM 2002</option>
-                        <option value="RRIM 2023">RRIM 2023</option>
-                        <option value="RRIM 2024">RRIM 2024</option>
-                    </select>
+                
+                <!-- Klon Getah - Checkbox Group -->
+                <div class="col-12">
+                    <label class="form-label">Klon Getah * <span class="text-muted fw-normal">(Pilih satu atau lebih)</span></label>
+                    <div class="checkbox-group" id="klonGetahGroup">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="klon_getah[]" value="PB 260" id="klon_pb260" onchange="updateSelectedKlon()">
+                            <label class="form-check-label" for="klon_pb260">PB 260</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="klon_getah[]" value="PB 350" id="klon_pb350" onchange="updateSelectedKlon()">
+                            <label class="form-check-label" for="klon_pb350">PB 350</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="klon_getah[]" value="RRIM 928" id="klon_rrim928" onchange="updateSelectedKlon()">
+                            <label class="form-check-label" for="klon_rrim928">RRIM 928</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="klon_getah[]" value="RRIM 2001" id="klon_rrim2001" onchange="updateSelectedKlon()">
+                            <label class="form-check-label" for="klon_rrim2001">RRIM 2001</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="klon_getah[]" value="RRIM 2002" id="klon_rrim2002" onchange="updateSelectedKlon()">
+                            <label class="form-check-label" for="klon_rrim2002">RRIM 2002</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="klon_getah[]" value="RRIM 2023" id="klon_rrim2023" onchange="updateSelectedKlon()">
+                            <label class="form-check-label" for="klon_rrim2023">RRIM 2023</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="klon_getah[]" value="RRIM 2024" id="klon_rrim2024" onchange="updateSelectedKlon()">
+                            <label class="form-check-label" for="klon_rrim2024">RRIM 2024</label>
+                        </div>
+                    </div>
+                    <div class="selected-klon-container" id="selectedKlonContainer">
+                        <span class="text-muted small" id="selectedKlonText">Tiada klon dipilih</span>
+                    </div>
+                    <div id="klonValidationError" class="text-danger small mt-1" style="display: none;">Sila pilih sekurang-kurangnya satu klon getah.</div>
                 </div>
 
                 <div class="col-md-6">
@@ -491,7 +501,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div class="col-md-6">
                     <label for="keluasan_diluluskan" class="form-label">Keluasan Diluluskan (Hektar)</label>
-                    <input type="number" class="form-control" id="keluasan_diluluskan" name="keluasan_diluluskan" step="0.01" placeholder="Contoh: 1.5">
+                    <input type="number" class="form-control" id="keluasan_diluluskan" name="keluasan_diluluskan" step="0.0001" placeholder="Contoh: 1.5">
                 </div>
                 <div class="col-md-6">
                     <label for="bantuan_ansuran" class="form-label">Status Bantuan Ansuran</label>
@@ -550,7 +560,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <a href="dashboard.php" class="btn btn-outline-secondary rounded-3 px-4">
                     <i class="bi bi-x-circle me-1"></i> Batal
                 </a>
-                <button type="submit" class="btn btn-success rounded-3 px-4" style="background-color: var(--accent-color);">
+                <button type="submit" class="btn btn-success rounded-3 px-4" style="background-color: var(--accent-color);" onclick="return validateKlonSelection()">
                     <i class="bi bi-check-circle me-1"></i> Simpan Kebun Baru
                 </button>
             </div>
@@ -562,30 +572,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-function switchMode(mode) {
-    // Toggle button active state
-    document.querySelectorAll('.tab-toggle .btn').forEach(btn => btn.classList.remove('active'));
-    event.target.closest('.btn').classList.add('active');
+function updateSelectedKlon() {
+    const checkboxes = document.querySelectorAll('input[name="klon_getah[]"]:checked');
+    const container = document.getElementById('selectedKlonContainer');
+    const textElement = document.getElementById('selectedKlonText');
+    const errorElement = document.getElementById('klonValidationError');
     
-    // Toggle tab content
-    document.getElementById('existing-tab').classList.remove('active');
-    document.getElementById('new_pekebun-tab').classList.remove('active');
-    
-    if (mode === 'existing') {
-        document.getElementById('existing-tab').classList.add('active');
-        document.getElementById('pekebun_id').setAttribute('required', 'required');
-        document.getElementById('nama_pekebun').removeAttribute('required');
-        document.getElementById('no_telefon').removeAttribute('required');
-        document.getElementById('alamat').removeAttribute('required');
-    } else if (mode === 'new_pekebun') {
-        document.getElementById('new_pekebun-tab').classList.add('active');
-        document.getElementById('pekebun_id').removeAttribute('required');
-        document.getElementById('nama_pekebun').setAttribute('required', 'required');
-        document.getElementById('no_telefon').setAttribute('required', 'required');
-        document.getElementById('alamat').setAttribute('required', 'required');
+    if (checkboxes.length === 0) {
+        textElement.innerHTML = 'Tiada klon dipilih';
+        textElement.className = 'text-muted small';
+        errorElement.style.display = 'none';
+        return;
     }
     
-    document.getElementById('mode-input').value = mode;
+    let html = '';
+    checkboxes.forEach((cb, index) => {
+        html += `<span class="selected-klon-badge">${cb.value}</span>`;
+    });
+    
+    textElement.innerHTML = html;
+    textElement.className = '';
+    errorElement.style.display = 'none';
+}
+
+function validateKlonSelection() {
+    const checkboxes = document.querySelectorAll('input[name="klon_getah[]"]:checked');
+    const errorElement = document.getElementById('klonValidationError');
+    
+    if (checkboxes.length === 0) {
+        errorElement.style.display = 'block';
+        // Scroll to the klon section
+        document.getElementById('klonGetahGroup').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+    }
+    
+    return true;
 }
 
 function displayFileName(input) {

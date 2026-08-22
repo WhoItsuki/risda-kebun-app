@@ -116,27 +116,13 @@ $qr_api_url = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=1
 
 <div class="container pb-5">
 
-    <!-- Modul Ujian IP & Alat Cetak (Bukan Cetak) -->
+    <!--Alat Cetak (Bukan Cetak) -->
     <div class="card border-0 shadow-sm mb-4 no-print mx-auto" style="max-width: 750px; border-radius: 12px;">
         <div class="card-body p-3 bg-white rounded-3">
             <div class="row g-3 align-items-center">
-                <!-- Pilihan Penyesuaian Host/IP -->
-                <div class="col-md-7">
-                    <form method="GET" action="kebun-qr.php" class="d-flex gap-2">
-                        <input type="hidden" name="id" value="<?= $kebun['id'] ?>">
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text bg-light text-muted"><i class="bi bi-wifi me-1"></i> Host / IP Local</span>
-                            <input type="text" name="host" class="form-control" value="<?= htmlspecialchars($current_host) ?>" placeholder="Contoh: 192.168.1.15">
-                            <button type="submit" class="btn btn-primary btn-sm">Set IP</button>
-                        </div>
-                    </form>
-                    <small class="text-muted d-block mt-1" style="font-size: 0.725rem;">
-                        <i class="bi bi-info-circle me-1"></i> Tukar ke IP PC anda (cth: <code>192.168.x.x</code>) untuk imbasan telefon di Wi-Fi sama.
-                    </small>
-                </div>
-
+                
                 <!-- Butang Tindakan Cetak / Muat Turun -->
-                <div class="col-md-5 d-flex justify-content-md-end gap-2">
+                <div class="col-12 d-flex justify-content-center gap-2">
                     <button onclick="window.print()" class="btn btn-success btn-sm px-3 d-flex align-items-center" style="background-color: var(--accent-color);">
                         <i class="bi bi-printer-fill me-1"></i> Cetak Plat
                     </button>
@@ -194,7 +180,7 @@ $qr_api_url = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=1
                     HASH TOKEN: <?= htmlspecialchars($kebun['qr_code_hash']) ?>
                 </span>
                 <span class="text-muted d-block" style="font-size: 0.65rem;">
-                    HAK CIPTA TERPELIHARA &copy; RISDA MALAYSIA
+                    HAK CIPTA TERPELIHARA &copy; RISDA KELANTAN UTARA
                 </span>
             </div>
         </div>

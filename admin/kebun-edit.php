@@ -34,11 +34,6 @@ if (!$kebun) {
     exit();
 }
 
-// Fetch all pekebun list for selection option
-$stmt_pekebun = $db->prepare("SELECT id, nama, no_telefon, alamat FROM pekebun ORDER BY nama ASC");
-$stmt_pekebun->execute();
-$pekebun_list = $stmt_pekebun->fetchAll();
-
 // Fetch existing Bantuan Lain details
 $stmt_bantuan = $db->prepare("SELECT * FROM bantuan_lain WHERE kebun_id = ? OR (kebun_id IS NULL AND pekebun_id = ?) ORDER BY id DESC LIMIT 1");
 $stmt_bantuan->execute([$kebun_id, $kebun['pekebun_id']]);
@@ -48,51 +43,30 @@ $bantuan_lain = $stmt_bantuan->fetch();
 $pelan_lot_blob = $kebun['pelan_lot'] ?? null;
 $has_pelan_lot = !empty($pelan_lot_blob);
 
+// Get current klon getah as array
+$current_klon_array = [];
+if (!empty($kebun['klon_getah'])) {
+    $current_klon_array = array_map('trim', explode(',', $kebun['klon_getah']));
+}
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $pekebun_mode = $_POST['pekebun_mode'] ?? 'current'; // 'current', 'existing', or 'new_pekebun'
-    
     try {
         $db->beginTransaction();
 
         $pekebun_id = $kebun['pekebun_id'];
 
-        // 1. Handle Pekebun update/assignment
-        if ($pekebun_mode === 'current') {
-            // Update current pekebun's details
-            $nama_pekebun = trim($_POST['nama_pekebun_current'] ?? '');
-            $no_telefon = trim($_POST['no_telefon_current'] ?? '');
-            $alamat = trim($_POST['alamat_current'] ?? '');
+        // Update current pekebun's details
+        $nama_pekebun = trim($_POST['nama_pekebun_current'] ?? '');
+        $no_telefon = trim($_POST['no_telefon_current'] ?? '');
+        $alamat = trim($_POST['alamat_current'] ?? '');
 
-            if (empty($nama_pekebun) || empty($no_telefon) || empty($alamat)) {
-                throw new Exception('Sila isi semua maklumat pekebun semasa.');
-            }
-
-            $stmt = $db->prepare("UPDATE pekebun SET nama = ?, no_telefon = ?, alamat = ? WHERE id = ?");
-            $stmt->execute([$nama_pekebun, $no_telefon, $alamat, $pekebun_id]);
-
-        } elseif ($pekebun_mode === 'existing') {
-            // Assign to a different existing pekebun
-            $selected_pekebun_id = (int)($_POST['pekebun_id_existing'] ?? 0);
-            if ($selected_pekebun_id <= 0) {
-                throw new Exception('Sila pilih pekebun sedia ada yang sah.');
-            }
-            $pekebun_id = $selected_pekebun_id;
-
-        } elseif ($pekebun_mode === 'new_pekebun') {
-            // Register a new pekebun and assign
-            $nama_pekebun = trim($_POST['nama_pekebun_new'] ?? '');
-            $no_telefon = trim($_POST['no_telefon_new'] ?? '');
-            $alamat = trim($_POST['alamat_new'] ?? '');
-
-            if (empty($nama_pekebun) || empty($no_telefon) || empty($alamat)) {
-                throw new Exception('Sila isi semua maklumat pekebun baharu.');
-            }
-
-            $stmt = $db->prepare("INSERT INTO pekebun (nama, no_telefon, alamat) VALUES (?, ?, ?)");
-            $stmt->execute([$nama_pekebun, $no_telefon, $alamat]);
-            $pekebun_id = (int)$db->lastInsertId();
+        if (empty($nama_pekebun) || empty($no_telefon) || empty($alamat)) {
+            throw new Exception('Sila isi semua maklumat pekebun.');
         }
+
+        $stmt = $db->prepare("UPDATE pekebun SET nama = ?, no_telefon = ?, alamat = ? WHERE id = ?");
+        $stmt->execute([$nama_pekebun, $no_telefon, $alamat, $pekebun_id]);
 
         // 2. Handle Kebun Data
         $no_lot = trim($_POST['no_lot'] ?? '');
@@ -100,14 +74,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $lokasi_kebun = trim($_POST['lokasi_kebun'] ?? '');
         $mukim = trim($_POST['mukim'] ?? '');
         $daerah = trim($_POST['daerah'] ?? '');
-        $klon_getah = trim($_POST['klon_getah'] ?? '');
+        
+        // Get selected klon getah from checkboxes
+        $klon_getah_selected = $_POST['klon_getah'] ?? [];
+        if (empty($klon_getah_selected)) {
+            throw new Exception('Sila pilih sekurang-kurangnya satu klon getah.');
+        }
+        $klon_getah = implode(', ', $klon_getah_selected); // Store as comma-separated string
+        
         $jumlah_pokok = !empty($_POST['jumlah_pokok']) ? (int)$_POST['jumlah_pokok'] : null;
         $tahun_tanam = !empty($_POST['tahun_tanam']) ? (strlen(trim((string)$_POST['tahun_tanam'])) == 4 ? trim((string)$_POST['tahun_tanam']) . '-01-01' : trim((string)$_POST['tahun_tanam'])) : null;
         $tahun_sulaman = !empty($_POST['tahun_sulaman']) ? (strlen(trim((string)$_POST['tahun_sulaman'])) == 4 ? trim((string)$_POST['tahun_sulaman']) . '-01-01' : trim((string)$_POST['tahun_sulaman'])) : null;
         $jarak_tanaman = trim($_POST['jarak_tanaman'] ?? '');
         $koordinat = trim($_POST['koordinat'] ?? '');
+        $pegawai_risda_kawasan = trim($_POST['pegawai_risda_kawasan'] ?? '');
 
-        if (empty($no_lot) || empty($keluasan_kebun) || empty($lokasi_kebun) || empty($daerah) || empty($klon_getah)) {
+        if (empty($no_lot) || empty($keluasan_kebun) || empty($lokasi_kebun) || empty($daerah)) {
             throw new Exception('Sila isi semua medan wajib (*) untuk maklumat kebun.');
         }
 
@@ -183,7 +165,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 tahun_sulaman = ?,
                 jarak_tanaman = ?,
                 koordinat = ?,
-                pelan_lot = ?
+                pelan_lot = ?,
+                pegawai_risda_kawasan = ?
             WHERE id = ?
         ");
 
@@ -201,6 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $jarak_tanaman,
             $koordinat,
             $new_pelan_lot_blob,
+            $pegawai_risda_kawasan,
             $kebun_id
         ]);
 
@@ -321,6 +305,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $pelan_lot_blob = $kebun['pelan_lot'] ?? null;
         $has_pelan_lot = !empty($pelan_lot_blob);
+        
+        // Update current klon array
+        $current_klon_array = [];
+        if (!empty($kebun['klon_getah'])) {
+            $current_klon_array = array_map('trim', explode(',', $kebun['klon_getah']));
+        }
 
         header("Refresh: 2; url=kebun-detail.php?id={$kebun_id}");
 
@@ -391,31 +381,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin-top: 1.5rem;
             margin-bottom: 1rem;
         }
-        .tab-toggle {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
-        }
-        .tab-toggle .btn {
-            flex: 1;
-            border-radius: 8px;
-            font-weight: 600;
-        }
-        .tab-toggle .btn-outline-secondary:not(.active) {
-            border-color: var(--card-border);
-            color: #6c757d;
-        }
-        .tab-toggle .btn.active {
-            background-color: var(--accent-color);
-            border-color: var(--accent-color);
-            color: #ffffff;
-        }
-        .tab-content {
-            display: none;
-        }
-        .tab-content.active {
-            display: block;
-        }
         .info-box {
             background: #f8f9fa;
             border: 1px solid var(--card-border);
@@ -432,6 +397,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border-radius: 8px;
             background: #fafafa;
             padding: 4px;
+        }
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+        }
+        .checkbox-group .form-check {
+            margin: 0;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .checkbox-group .form-check:hover {
+            background-color: #e9ecef;
+        }
+        .checkbox-group .form-check-input:checked {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+        .checkbox-group .form-check-label {
+            font-weight: 500;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .selected-klon-badge {
+            display: inline-block;
+            background-color: var(--accent-color);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin: 0.25rem;
+            font-weight: 500;
+        }
+        .selected-klon-container {
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background: #ffffff;
+            border-radius: 8px;
+            border: 1px dashed var(--card-border);
+            min-height: 40px;
+        }
+        .pekebun-info-box {
+            background: #f0f7f4;
+            border-left: 4px solid var(--accent-color);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .pekebun-info-box .info-label {
+            font-size: 0.8rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+        .pekebun-info-box .info-value {
+            font-weight: 600;
+            color: var(--primary-color);
         }
     </style>
 </head>
@@ -462,7 +490,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <h3 class="fw-bold mb-1 text-dark">
                 <i class="bi bi-pencil-square text-success me-2"></i> Kemaskini Rekod Kebun
             </h3>
-            <p class="text-muted small mb-0">No. Lot: <strong><?= htmlspecialchars($kebun['no_lot']) ?></strong> | Pekebun: <strong><?= htmlspecialchars($kebun['nama_pekebun']) ?></strong></p>
+            <p class="text-muted small mb-0">No. Lot: <strong><?= htmlspecialchars($kebun['no_lot']) ?></strong></p>
         </div>
         <div class="d-flex gap-2">
             <a href="kebun-delete.php?id=<?= $kebun['id'] ?>" class="btn btn-outline-danger btn-sm">
@@ -505,73 +533,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <span>Maklumat Pekebun</span>
             </div>
 
-            <!-- Toggle Pekebun Mode -->
-            <div class="tab-toggle">
-                <button type="button" class="btn btn-outline-secondary active" onclick="switchPekebunMode('current')">
-                    <i class="bi bi-pencil me-1"></i> Kemaskini Pekebun Semasa
-                </button>
-                <button type="button" class="btn btn-outline-secondary" onclick="switchPekebunMode('existing')">
-                    <i class="bi bi-people me-1"></i> Pilih Pekebun Lain
-                </button>
-                <button type="button" class="btn btn-outline-secondary" onclick="switchPekebunMode('new_pekebun')">
-                    <i class="bi bi-person-plus me-1"></i> Tambah Pekebun Baru
-                </button>
-            </div>
 
-            <input type="hidden" id="pekebun_mode" name="pekebun_mode" value="current">
-
-            <!-- Mode 1: Edit Current Pekebun -->
-            <div id="tab-current" class="tab-content active">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="nama_pekebun_current" class="form-label">Nama Pekebun *</label>
-                        <input type="text" class="form-control" id="nama_pekebun_current" name="nama_pekebun_current" value="<?= htmlspecialchars($kebun['nama_pekebun']) ?>" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label for="no_telefon_current" class="form-label">No. Telefon *</label>
-                        <input type="tel" class="form-control" id="no_telefon_current" name="no_telefon_current" value="<?= htmlspecialchars($kebun['no_telefon']) ?>" required>
-                    </div>
-                    <div class="col-12">
-                        <label for="alamat_current" class="form-label">Alamat *</label>
-                        <textarea class="form-control" id="alamat_current" name="alamat_current" rows="3" required><?= htmlspecialchars($kebun['alamat']) ?></textarea>
-                    </div>
+            <!-- Edit Pekebun Fields -->
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="nama_pekebun_current" class="form-label">Nama Pekebun *</label>
+                    <input type="text" class="form-control" id="nama_pekebun_current" name="nama_pekebun_current" value="<?= htmlspecialchars($kebun['nama_pekebun']) ?>" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="no_telefon_current" class="form-label">No. Telefon *</label>
+                    <input type="tel" class="form-control" id="no_telefon_current" name="no_telefon_current" value="<?= htmlspecialchars($kebun['no_telefon']) ?>" required>
+                </div>
+                <div class="col-12">
+                    <label for="alamat_current" class="form-label">Alamat *</label>
+                    <textarea class="form-control" id="alamat_current" name="alamat_current" rows="3" required><?= htmlspecialchars($kebun['alamat']) ?></textarea>
                 </div>
             </div>
-
-            <!-- Mode 2: Choose Existing Pekebun -->
-            <div id="tab-existing" class="tab-content">
-                <div class="mb-3">
-                    <label for="pekebun_id_existing" class="form-label">Pilih Pekebun Sedia Ada</label>
-                    <select class="form-select" id="pekebun_id_existing" name="pekebun_id_existing">
-                        <option value="">-- Sila Pilih Pekebun --</option>
-                        <?php foreach ($pekebun_list as $p): ?>
-                            <option value="<?= $p['id'] ?>" <?= $p['id'] == $kebun['pekebun_id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($p['nama']) ?> (<?= htmlspecialchars($p['no_telefon']) ?>)
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <small class="text-muted d-block mt-1">Kebun ini akan dipindahkan ke bawah pengurusan pekebun yang dipilih.</small>
-                </div>
-            </div>
-
-            <!-- Mode 3: Register New Pekebun -->
-            <div id="tab-new_pekebun" class="tab-content">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="nama_pekebun_new" class="form-label">Nama Pekebun Baharu *</label>
-                        <input type="text" class="form-control" id="nama_pekebun_new" name="nama_pekebun_new" placeholder="Nama pekebun baharu">
-                    </div>
-                    <div class="col-md-6">
-                        <label for="no_telefon_new" class="form-label">No. Telefon *</label>
-                        <input type="tel" class="form-control" id="no_telefon_new" name="no_telefon_new" placeholder="Contoh: 0123456789">
-                    </div>
-                    <div class="col-12">
-                        <label for="alamat_new" class="form-label">Alamat *</label>
-                        <textarea class="form-control" id="alamat_new" name="alamat_new" rows="3" placeholder="Alamat penuh pekebun baharu"></textarea>
-                    </div>
-                </div>
-            </div>
-
 
             <!-- Kebun Section -->
             <div class="section-header mt-4">
@@ -602,23 +579,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label for="daerah" class="form-label">Daerah *</label>
                     <input type="text" class="form-control" id="daerah" name="daerah" value="<?= htmlspecialchars($kebun['daerah']) ?>" required>
                 </div>
-                <div class="col-md-6">
-                    <label for="klon_getah" class="form-label">Klon Getah *</label>
-                    <?php 
-                        $klon_options = ['GT1', 'RRIM600', 'RRIM712', 'BPM24', 'Lain'];
-                        $current_klon = $kebun['klon_getah'];
-                    ?>
-                    <select class="form-select" id="klon_getah" name="klon_getah" required>
-                        <option value="<?= htmlspecialchars($kebun['klon_getah']) ?>"><?php echo $kebun['klon_getah'];?></option>
-                        <option value="PB 260">PB 260</option>
-                        <option value="PB 350">PB 350</option>
-                        <option value="RRIM 928">RRIM 928</option>
-                        <option value="RRIM 2001">RRIM 2001</option>
-                        <option value="RRIM 2002">RRIM 2002</option>
-                        <option value="RRIM 2023">RRIM 2023</option>
-                        <option value="RRIM 2024">RRIM 2024</option>
-                        
-                    </select>
+                
+                <!-- Klon Getah - Checkbox Group -->
+                <div class="col-12">
+                    <label class="form-label">Klon Getah * <span class="text-muted fw-normal">(Pilih satu atau lebih)</span></label>
+                    <div class="checkbox-group" id="klonGetahGroup">
+                        <?php 
+                        $klon_list = ['PB 260', 'PB 350', 'RRIM 928', 'RRIM 2001', 'RRIM 2002', 'RRIM 2023', 'RRIM 2024'];
+                        foreach ($klon_list as $klon):
+                            $checked = in_array($klon, $current_klon_array) ? 'checked' : '';
+                        ?>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="klon_getah[]" value="<?= $klon ?>" id="klon_<?= str_replace(' ', '_', $klon) ?>" <?= $checked ?> onchange="updateSelectedKlon()">
+                            <label class="form-check-label" for="klon_<?= str_replace(' ', '_', $klon) ?>"><?= $klon ?></label>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="selected-klon-container" id="selectedKlonContainer">
+                        <span class="text-muted small" id="selectedKlonText">
+                            <?php if (!empty($current_klon_array)): ?>
+                                <?php foreach ($current_klon_array as $klon): ?>
+                                    <span class="selected-klon-badge"><?= htmlspecialchars($klon) ?></span>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                Tiada klon dipilih
+                            <?php endif; ?>
+                        </span>
+                    </div>
+                    <div id="klonValidationError" class="text-danger small mt-1" style="display: none;">Sila pilih sekurang-kurangnya satu klon getah.</div>
                 </div>
 
                 <div class="col-md-6">
@@ -645,23 +633,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 
                 <div class="col-md-6">
-                    <label for="pegawai_risda_kawasan" class="form-label">Pegawai RISDA Kawasan</label>
+                    <label for="pegawai_risda_kawasan" class="form-label">Pegawai RISDA Kawasan *</label>
                     <select class="form-select" id="pegawai_risda_kawasan" name="pegawai_risda_kawasan" required>
-                        <option value="<?= htmlspecialchars($kebun['pegawai_risda_kawasan'] ?? '') ?>"><?php echo $kebun['pegawai_risda_kawasan'];?></option>
-                        <option value="Mazlan bin Jusoh">Mazlan bin Jusoh</option>
-                        <option value="Ahmad Kharsani bin Ariffin">Ahmad Kharsani bin Ariffin</option>
-                        <option value="Wan Shariman bin Wan Mamat">Wan Shariman bin Wan Mamat</option>
-                        <option value="Mohd Shahrul bin Yusop">Mohd Shahrul bin Yusop</option>
-                        <option value="Muhamad Ezri bin Rosli">Muhamad Ezri bin Rosli</option>
-                        <option value="Amirul Khusairi bin Dzu">Amirul Khusairi bin Dzu</option>
-                        <option value="Nik Mohd Abdul Hakim bin Zalani">Nik Mohd Abdul Hakim bin Zalani</option>
-                        <option value="Mohammad Izzat bin Saidi">Mohammad Izzat bin Saidi</option>
-                        <option value="Mohamad Faizul bi Hashim">Mohamad Faizul bi Hashim</option>
-                        <option value="Ahmad Firdaus bin Teh">Ahmad Firdaus bin Teh</option>
-                        <option value="Mohd Rhitaudin bin Ahmad">Mohd Rhitaudin bin Ahmad</option>
-                        <option value="Muhammad Nur Akif bin Jumaat">Muhammad Nur Akif bin Jumaat</option>
+                        <option value="">-- Pilih Pegawai RISDA Kawasan --</option>
+                        <option value="Mazlan bin Jusoh" <?= ($kebun['pegawai_risda_kawasan'] ?? '') == 'Mazlan bin Jusoh' ? 'selected' : '' ?>>Mazlan bin Jusoh</option>
+                        <option value="Ahmad Kharsani bin Ariffin" <?= ($kebun['pegawai_risda_kawasan'] ?? '') == 'Ahmad Kharsani bin Ariffin' ? 'selected' : '' ?>>Ahmad Kharsani bin Ariffin</option>
+                        <option value="Wan Shariman bin Wan Mamat" <?= ($kebun['pegawai_risda_kawasan'] ?? '') == 'Wan Shariman bin Wan Mamat' ? 'selected' : '' ?>>Wan Shariman bin Wan Mamat</option>
+                        <option value="Mohd Shahrul bin Yusop" <?= ($kebun['pegawai_risda_kawasan'] ?? '') == 'Mohd Shahrul bin Yusop' ? 'selected' : '' ?>>Mohd Shahrul bin Yusop</option>
+                        <option value="Muhamad Ezri bin Rosli" <?= ($kebun['pegawai_risda_kawasan'] ?? '') == 'Muhamad Ezri bin Rosli' ? 'selected' : '' ?>>Muhamad Ezri bin Rosli</option>
+                        <option value="Amirul Khusairi bin Dzu" <?= ($kebun['pegawai_risda_kawasan'] ?? '') == 'Amirul Khusairi bin Dzu' ? 'selected' : '' ?>>Amirul Khusairi bin Dzu</option>
+                        <option value="Nik Mohd Abdul Hakim bin Zalani" <?= ($kebun['pegawai_risda_kawasan'] ?? '') == 'Nik Mohd Abdul Hakim bin Zalani' ? 'selected' : '' ?>>Nik Mohd Abdul Hakim bin Zalani</option>
+                        <option value="Mohammad Izzat bin Saidi" <?= ($kebun['pegawai_risda_kawasan'] ?? '') == 'Mohammad Izzat bin Saidi' ? 'selected' : '' ?>>Mohammad Izzat bin Saidi</option>
+                        <option value="Mohamad Faizul bi Hashim" <?= ($kebun['pegawai_risda_kawasan'] ?? '') == 'Mohamad Faizul bi Hashim' ? 'selected' : '' ?>>Mohamad Faizul bi Hashim</option>
+                        <option value="Ahmad Firdaus bin Teh" <?= ($kebun['pegawai_risda_kawasan'] ?? '') == 'Ahmad Firdaus bin Teh' ? 'selected' : '' ?>>Ahmad Firdaus bin Teh</option>
+                        <option value="Mohd Rhitaudin bin Ahmad" <?= ($kebun['pegawai_risda_kawasan'] ?? '') == 'Mohd Rhitaudin bin Ahmad' ? 'selected' : '' ?>>Mohd Rhitaudin bin Ahmad</option>
+                        <option value="Muhammad Nur Akif bin Jumaat" <?= ($kebun['pegawai_risda_kawasan'] ?? '') == 'Muhammad Nur Akif bin Jumaat' ? 'selected' : '' ?>>Muhammad Nur Akif bin Jumaat</option>
                     </select>
                 </div>
+                
                 <div class="col-12">
                     <label for="pelan_lot_file" class="form-label">Pelan Lot (Muat Naik Fail Baharu / Tukar)</label>
                     
@@ -766,8 +755,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label for="nama_bantuan" class="form-label">Nama Bantuan</label>
                     <select class="form-select" id="nama_bantuan" name="nama_bantuan">
                         <option value="">Pilih Nama Bantuan</option>
-                        <option value="Agro@TS">Agro@TS</option>
-                        <option value="TSG-i">TSG-i</option>
+                        <option value="Agro@TS" <?= ($bantuan_lain['nama_bantuan'] ?? '') == 'Agro@TS' ? 'selected' : '' ?>>Agro@TS</option>
+                        <option value="TSG-i" <?= ($bantuan_lain['nama_bantuan'] ?? '') == 'TSG-i' ? 'selected' : '' ?>>TSG-i</option>
                     </select>
                 </div>
                 <div class="col-md-6">
@@ -787,6 +776,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             </div>
 
+            <!-- Info Box -->
+            <div class="info-box mt-4">
+                <i class="bi bi-info-circle-fill me-2"></i>
+                <strong>Catatan:</strong> Medan bertanda * adalah wajib diisi. Anda hanya boleh mengemaskini maklumat pekebun semasa untuk kebun ini.
+            </div>
+
             <!-- Submit Buttons -->
             <div class="d-flex flex-wrap justify-content-between align-items-center mt-4 pt-3 border-top gap-2">
                 <a href="kebun-delete.php?id=<?= $kebun['id'] ?>" class="btn btn-outline-danger rounded-3 px-3">
@@ -796,7 +791,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <a href="kebun-detail.php?id=<?= $kebun['id'] ?>" class="btn btn-outline-secondary rounded-3 px-4">
                         <i class="bi bi-x-circle me-1"></i> Batal
                     </a>
-                    <button type="submit" class="btn btn-success rounded-3 px-4" style="background-color: var(--accent-color);">
+                    <button type="submit" class="btn btn-success rounded-3 px-4" style="background-color: var(--accent-color);" onclick="return validateKlonSelection()">
                         <i class="bi bi-check-circle me-1"></i> Simpan Perubahan
                     </button>
                 </div>
@@ -809,41 +804,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-function switchPekebunMode(mode) {
-    // Toggle tab buttons
-    document.querySelectorAll('.tab-toggle .btn').forEach(btn => btn.classList.remove('active'));
-    event.target.closest('.btn').classList.add('active');
+function updateSelectedKlon() {
+    const checkboxes = document.querySelectorAll('input[name="klon_getah[]"]:checked');
+    const container = document.getElementById('selectedKlonContainer');
+    const textElement = document.getElementById('selectedKlonText');
+    const errorElement = document.getElementById('klonValidationError');
     
-    // Toggle content panels
-    document.getElementById('tab-current').classList.remove('active');
-    document.getElementById('tab-existing').classList.remove('active');
-    document.getElementById('tab-new_pekebun').classList.remove('active');
-
-    // Reset required attributes
-    document.getElementById('nama_pekebun_current').removeAttribute('required');
-    document.getElementById('no_telefon_current').removeAttribute('required');
-    document.getElementById('alamat_current').removeAttribute('required');
-    document.getElementById('pekebun_id_existing').removeAttribute('required');
-    document.getElementById('nama_pekebun_new').removeAttribute('required');
-    document.getElementById('no_telefon_new').removeAttribute('required');
-    document.getElementById('alamat_new').removeAttribute('required');
-    
-    if (mode === 'current') {
-        document.getElementById('tab-current').classList.add('active');
-        document.getElementById('nama_pekebun_current').setAttribute('required', 'required');
-        document.getElementById('no_telefon_current').setAttribute('required', 'required');
-        document.getElementById('alamat_current').setAttribute('required', 'required');
-    } else if (mode === 'existing') {
-        document.getElementById('tab-existing').classList.add('active');
-        document.getElementById('pekebun_id_existing').setAttribute('required', 'required');
-    } else if (mode === 'new_pekebun') {
-        document.getElementById('tab-new_pekebun').classList.add('active');
-        document.getElementById('nama_pekebun_new').setAttribute('required', 'required');
-        document.getElementById('no_telefon_new').setAttribute('required', 'required');
-        document.getElementById('alamat_new').setAttribute('required', 'required');
+    if (checkboxes.length === 0) {
+        textElement.innerHTML = 'Tiada klon dipilih';
+        textElement.className = 'text-muted small';
+        errorElement.style.display = 'none';
+        return;
     }
     
-    document.getElementById('pekebun_mode').value = mode;
+    let html = '';
+    checkboxes.forEach((cb, index) => {
+        html += `<span class="selected-klon-badge">${cb.value}</span>`;
+    });
+    
+    textElement.innerHTML = html;
+    textElement.className = '';
+    errorElement.style.display = 'none';
+}
+
+function validateKlonSelection() {
+    const checkboxes = document.querySelectorAll('input[name="klon_getah[]"]:checked');
+    const errorElement = document.getElementById('klonValidationError');
+    
+    if (checkboxes.length === 0) {
+        errorElement.style.display = 'block';
+        // Scroll to the klon section
+        document.getElementById('klonGetahGroup').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+    }
+    
+    return true;
 }
 
 function displayFileName(input) {
@@ -895,6 +890,11 @@ function displayFileName(input) {
         preview.innerHTML = previewHTML;
     }
 }
+
+// Initialize selected klon display on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateSelectedKlon();
+});
 </script>
 </body>
 </html>
