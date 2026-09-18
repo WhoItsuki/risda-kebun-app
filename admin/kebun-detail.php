@@ -142,6 +142,7 @@ $has_pelan_lot = !empty($pelan_lot);
         <div>
             <h3 class="fw-bold mb-1 text-dark">Butiran Kebun: <?= htmlspecialchars($kebun['no_lot']) ?></h3>
             <p class="text-muted small mb-0">Diselenggara oleh: <strong><?= htmlspecialchars($kebun['nama_pekebun']) ?></strong></p>
+            <p class="text-muted small mb-0">Kemaskini Terkini: <strong><?= htmlspecialchars($kebun['kemaskini_terkini']) ?></strong></p>
         </div>
         <div class="d-flex gap-2">
             <a href="kebun-edit.php?id=<?= $kebun['id'] ?>" class="btn btn-outline-secondary">
@@ -155,6 +156,7 @@ $has_pelan_lot = !empty($pelan_lot);
             </a>
         </div>
     </div>
+    
 
     <!-- Layout Grid -->
     <div class="row g-4">

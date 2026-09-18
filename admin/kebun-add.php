@@ -107,13 +107,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Generate unique QR hash
         $qr_hash = bin2hex(random_bytes(16));
         
-        // Insert Kebun with BLOB image
+        // Insert Kebun with BLOB image and kemaskini_terkini
         $stmt = $db->prepare("
             INSERT INTO kebun (
                 pekebun_id, no_lot, keluasan_kebun, lokasi_kebun, mukim, daerah,
                 klon_getah, jumlah_pokok, tahun_tanam, tahun_sulaman, jarak_tanaman,
-                koordinat, pelan_lot, qr_code_hash, pegawai_risda_kawasan
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                koordinat, pelan_lot, qr_code_hash, pegawai_risda_kawasan, kemaskini_terkini
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
         ");
         
         $tahun_tanam_val = !empty($tahun_tanam) ? (strlen($tahun_tanam) == 4 ? $tahun_tanam . '-01-01' : $tahun_tanam) : null;

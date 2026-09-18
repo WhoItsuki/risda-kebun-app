@@ -166,7 +166,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 jarak_tanaman = ?,
                 koordinat = ?,
                 pelan_lot = ?,
-                pegawai_risda_kawasan = ?
+                pegawai_risda_kawasan = ?,
+                kemaskini_terkini = NOW()
             WHERE id = ?
         ");
 
